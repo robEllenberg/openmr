@@ -89,5 +89,6 @@ inline uint32_t timeGetTime()
 using namespace OpenRAVE;
 
 #include "servocontroller.h"
+#include "sinoscontroller.h"
 
 #endif

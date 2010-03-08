@@ -1,4 +1,4 @@
-// Copyright (C) 2006-2010 Carnegie Mellon University (rdiankov@cs.cmu.edu), Juan Gonzalez (juan@iearobotics.com)
+// Copyright (C) 2010 Juan Gonzalez (juan@iearobotics.com)
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -32,6 +32,8 @@ RAVE_PLUGIN_API InterfaceBasePtr CreateInterface(PluginType type, const std::str
     case PT_Controller:
         if( interfacename == "servocontroller")
             return InterfaceBasePtr(new ServoController(penv));
+	else if (interfacename == "sinoscontroller")
+	    return InterfaceBasePtr(new SinosController(penv));
         break;
     default:
         break;
@@ -50,6 +52,7 @@ RAVE_PLUGIN_API bool GetPluginAttributes(PLUGININFO* pinfo, int size)
 
     // fill pinfo
     pinfo->interfacenames[PT_Controller].push_back("ServoController");
+    pinfo->interfacenames[PT_Controller].push_back("SinosController");
     return true;
 }
 
