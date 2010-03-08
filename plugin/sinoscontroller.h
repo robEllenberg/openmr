@@ -30,15 +30,9 @@ class SinosController : public ControllerBase
     {
         _probot = robot;
 
-        //-- Initilialization of the odevelocity controller
-        _pvelocitycontroller = GetEnv()->CreateController("odevelocity");
-        _pvelocitycontroller->Init(_probot,"");
-
-        //-- Get the robot joints. Are needed in every simulation step for reading the
-        //-- joint angles and maxvelocities
-        std::vector<KinBodyPtr> bodies;
-        GetEnv()->GetBodies(bodies);
-        _joints = bodies[0]->GetJoints();
+        //-- Initilialization of the servocontroller
+        _pservocontroller = GetEnv()->CreateController("servocontroller");
+        _pservocontroller->Init(_probot,"");
 
 	cout << "OPENMR: Sinoscontroller" << endl;
 
@@ -48,18 +42,7 @@ class SinosController : public ControllerBase
 
     virtual void Reset(int options)
     {
-        //-- Initially, the reference positions should be set to the joints position
-        //-- in order for the servos to stay in the initial position
-        _ref_pos.resize(_probot->GetDOF());
-        std::vector<dReal> angle;
-        for (size_t i=0; i<_joints.size(); i++) {
-            _joints[i]->GetValues(angle);
-            _ref_pos[i]=angle[0];
-        }
-
-        //-- Default value of the Proportional controller KP constant
-        _KP=8.3;
-
+        //_ref_pos.resize(_probot->GetDOF());
     }
 
     virtual bool SetDesired(const std::vector<dReal>& values)
@@ -76,35 +59,15 @@ class SinosController : public ControllerBase
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        std::vector<dReal> angle;
-        std::vector<dReal> error(_probot->GetDOF());
-        std::vector<dReal> velocity(_probot->GetDOF());
+        //std::vector<dReal> error(_probot->GetDOF());
         stringstream is;
         stringstream os;
 
-        is << "setvelocity ";
+        is << "setpos ";
 
-        //-- K controller for all the joints
-        for (size_t i=0; i<_joints.size(); i++) {
-
-            //-- Get the current joint angle
-            _joints[i]->GetValues(angle);
-
-            //-- Calculate the distance to the reference position (error)
-            //-- and the desired velocity
-            error[i] = angle[0] - _ref_pos[i];
-            velocity[i] = -error[i]*_KP;
-
-            //-- Limit the velocity to its maximum
-            dReal Maxvel = _joints[i]->GetMaxVel();
-            if (velocity[i] > Maxvel) velocity[i] = Maxvel;
-            if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
-
-            is << velocity[i] << " ";
-        }
 
         //-- Set the joints velocities
-        _pvelocitycontroller->SendCommand(os,is);
+        //_pservocontroller->SendCommand(os,is);
 
         return true;
     }
@@ -117,16 +80,18 @@ class SinosController : public ControllerBase
 
         //-- Set position command. The joint angles are received in degrees
         if( cmd == "setpos" ) {
+            /*
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
                 dReal pos;
                 is >> pos;
 
                 //-- Store the reference positions in radians
-                _ref_pos[i]=pos*PI/180;
+                //_ref_pos[i]=pos*PI/180;
 
                 if( !is )
                     return false;
             }
+            */
             return true;
         }
 
@@ -145,10 +110,7 @@ class SinosController : public ControllerBase
 
 protected:
     RobotBasePtr _probot;
-    ControllerBasePtr _pvelocitycontroller;
-    std::vector<KinBody::JointPtr> _joints;
-    std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
-    dReal _KP;                    //-- P controller KP constant
+    ControllerBasePtr _pservocontroller;
 
 };
 
