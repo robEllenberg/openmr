@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.4)
-project (openrave-modular-robots)
+project (openmr)
 
 include(FindOpenRAVE.cmake)
 
@@ -13,14 +13,9 @@ endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
 link_directories(${OPENRAVE_LINK_DIRS})
-
-add_library(mrcontrollers SHARED mrcontrollersmain.cpp servocontroller.h plugindefs.h)
-target_link_libraries(mrcontrollers ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
-
-include_directories(mrcontrollers "${CMAKE_SOURCE_DIR}")
-set_target_properties(mrcontrollers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
-                                      LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-install(TARGETS mrcontrollers DESTINATION /home/juan/desarrollo/openrave/localinstall/share/openrave/plugins )
-
-
+add_library(openmrcontrollers SHARED openmrcontrollersmain.cpp servocontroller.h plugindefs.h)
+set_target_properties(openmrcontrollers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
+                                                   LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+target_link_libraries(openmrcontrollers ${OPENRAVE_LIBRARY} )
+install(TARGETS openmrcontrollers DESTINATION ${OPENRAVE_PREFIX}/share/openrave/plugins)
 
