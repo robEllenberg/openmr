@@ -13,9 +13,9 @@ endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 include_directories(${OPENRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR})
 link_directories(${OPENRAVE_LINK_DIRS})
-add_library(openmrcontrollers SHARED openmrcontrollersmain.cpp servocontroller.h plugindefs.h)
-set_target_properties(openmrcontrollers PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
+add_library(openmr SHARED openmrmain.cpp servocontroller.h plugindefs.h)
+set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                                    LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-target_link_libraries(openmrcontrollers ${OPENRAVE_LIBRARY} )
-install(TARGETS openmrcontrollers DESTINATION ${OPENRAVE_PREFIX}/share/openrave/plugins)
+target_link_libraries(openmr ${OPENRAVE_LIBRARY} )
+install(TARGETS openmr DESTINATION ${OPENRAVE_PREFIX}/share/openrave/plugins)
 
