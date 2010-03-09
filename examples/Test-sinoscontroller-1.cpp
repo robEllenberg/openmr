@@ -70,6 +70,9 @@ int main(int argc, char ** argv)
     is << "setoffset 0 0 ";
     pcontroller->SendCommand(os,is);
 
+    is << "setperiod 2 ";
+    pcontroller->SendCommand(os,is);
+
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
 

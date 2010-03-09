@@ -56,6 +56,8 @@ def run():
     phase0 = [i*120 for i in range(robot.GetDOF())]
     robot.GetController().SendCommand('setinitialphase '+' '.join(str(f) for f in phase0))
 
+    #-- Set the period
+    robot.GetController().SendCommand('setperiod 1.5');
 
     while True:
         time.sleep(1.0)

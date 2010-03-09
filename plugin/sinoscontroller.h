@@ -134,6 +134,12 @@ class SinosController : public ControllerBase
             }
             return true;
         }
+        else if ( cmd == "setperiod" ) {
+            is >> _period;
+            _samplingperiod=_period/_N;
+
+            return true;
+        }
 
         return true;
     }
