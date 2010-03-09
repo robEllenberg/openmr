@@ -47,7 +47,18 @@ class SinosController : public ControllerBase
         _N=20;
         _samplingperiod=_period/_N;
         _phase=0;
+
         _ref_pos.resize(_probot->GetDOF());
+        _amplitude.resize(_probot->GetDOF());
+        _phase0.resize(_probot->GetDOF());
+        _offset.resize(_probot->GetDOF());
+
+        for (int i=0; i<_probot->GetDOF(); i++) {
+          _ref_pos[i]=0;
+          _amplitude[i]=0;
+          _phase0[i]=0;
+          _offset[i]=0;
+        }
 
          cout<<"Sampling period: " << _samplingperiod << endl;
     }
@@ -68,16 +79,21 @@ class SinosController : public ControllerBase
     {
         _pservocontroller->SimulationStep(fTimeElapsed);
         _samplingtics += fTimeElapsed;
-        if ( _samplingtics < _samplingperiod) return true;
+        if (_samplingtics < _samplingperiod) return true;
 
-        //-- Take a new sample
         _samplingtics=0;
         _phase += 360.0/_N;
-        _ref_pos[0]=45*sin(_phase*PI/180);
+
+        stringstream os, is;
+        is << "setpos ";
+
+        //-- Calculate the next samples
+        for (size_t i=0; i<_ref_pos.size(); i++) {
+            _ref_pos[i]=_amplitude[i]*sin(_phase*PI/180 + _phase0[i]*PI/180) + _offset[i];
+            is<<_ref_pos[i]<<" ";
+        }
 
         //-- Set the new servos reference positions
-        stringstream os, is;
-        is << "setpos " << _ref_pos[0] << " 0 ";
         _pservocontroller->SendCommand(os,is);
 
         return true;
@@ -91,18 +107,31 @@ class SinosController : public ControllerBase
 
         //-- Set position command. The joint angles are received in degrees
         if( cmd == "setamplitude" ) {
-            /*
-            for(size_t i = 0; i < _ref_pos.size(); ++i) {
-                dReal pos;
-                is >> pos;
 
-                //-- Store the reference positions in radians
-                //_ref_pos[i]=pos*PI/180;
+            for(size_t i = 0; i < _amplitude.size(); ++i) {
+                is >> _amplitude[i];
 
                 if( !is )
                     return false;
             }
-            */
+            return true;
+        }
+        else if ( cmd == "setinitialphase" ) {
+            for(size_t i = 0; i < _phase0.size(); ++i) {
+                is >> _phase0[i];
+
+                if( !is )
+                    return false;
+            }
+            return true;
+        }
+        else if ( cmd == "setoffset" ) {
+            for(size_t i = 0; i < _offset.size(); ++i) {
+                is >> _offset[i];
+
+                if( !is )
+                    return false;
+            }
             return true;
         }
 
@@ -127,7 +156,10 @@ protected:
     int _N;                   //-- Number of samples
     dReal _period;            //-- Oscilation period in seconds
     dReal _phase;
-    std::vector<dReal> _ref_pos;  //-- Reference positions for the servos (in degrees)
+    std::vector<dReal> _ref_pos;   //-- Reference positions for the servos (in degrees)
+    std::vector<dReal> _amplitude; //-- Oscillation amplitudes
+    std::vector<dReal> _phase0;    //-- Oscillation initial phase
+    std::vector<dReal> _offset;    //-- Oscillation offset
 
 };
 

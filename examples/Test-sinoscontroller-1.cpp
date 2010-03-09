@@ -60,24 +60,27 @@ int main(int argc, char ** argv)
     ControllerBasePtr pcontroller = penv->CreateController("sinoscontroller");
     probot->SetController(pcontroller,"");
 
+    stringstream os,is;
+    is << "setamplitude 45 45 ";
+    pcontroller->SendCommand(os,is);
+
+    is << "setinitialphase 0 120 ";
+    pcontroller->SendCommand(os,is);
+
+    is << "setoffset 0 0 ";
+    pcontroller->SendCommand(os,is);
+
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
 
-    stringstream is;
-    stringstream os;
-
+    /*
     while(1) {
-      //is << "setpos 45 45 ";
-      //pcontroller->SendCommand(os,is);
-      sleep(1);
-
-      //is << "setpos -45 -45 ";
-      //pcontroller->SendCommand(os,is);
       sleep(1);
     }
+    */
 
-    thviewer.join(); // wait for the viewer thread to exit
-    penv->Destroy(); // destroyThe
+    thviewer.join();
+    penv->Destroy();
     return 0;
 }
 
