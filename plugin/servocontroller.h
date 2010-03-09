@@ -40,6 +40,8 @@ class ServoController : public ControllerBase
         GetEnv()->GetBodies(bodies);
         _joints = bodies[0]->GetJoints();
 
+        cout << "Servocontroller: INIT" << endl;
+
         Reset(0);
         return true;
     }

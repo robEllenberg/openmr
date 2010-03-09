@@ -34,7 +34,7 @@ class SinosController : public ControllerBase
         _pservocontroller = GetEnv()->CreateController("servocontroller");
         _pservocontroller->Init(_probot,"");
 
-	cout << "OPENMR: Sinoscontroller" << endl;
+        cout << "OPENMR: Sinoscontroller: INIT" << endl;
 
         Reset(0);
         return true;
@@ -42,7 +42,14 @@ class SinosController : public ControllerBase
 
     virtual void Reset(int options)
     {
-        //_ref_pos.resize(_probot->GetDOF());
+        _samplingtics=0;
+        _period=1.5;
+        _N=20;
+        _samplingperiod=_period/_N;
+        _phase=0;
+        _ref_pos.resize(_probot->GetDOF());
+
+         cout<<"Sampling period: " << _samplingperiod << endl;
     }
 
     virtual bool SetDesired(const std::vector<dReal>& values)
@@ -59,15 +66,19 @@ class SinosController : public ControllerBase
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        //std::vector<dReal> error(_probot->GetDOF());
-        stringstream is;
-        stringstream os;
+        _pservocontroller->SimulationStep(fTimeElapsed);
+        _samplingtics += fTimeElapsed;
+        if ( _samplingtics < _samplingperiod) return true;
 
-        is << "setpos ";
+        //-- Take a new sample
+        _samplingtics=0;
+        _phase += 360.0/_N;
+        _ref_pos[0]=45*sin(_phase*PI/180);
 
-
-        //-- Set the joints velocities
-        //_pservocontroller->SendCommand(os,is);
+        //-- Set the new servos reference positions
+        stringstream os, is;
+        is << "setpos " << _ref_pos[0] << " 0 ";
+        _pservocontroller->SendCommand(os,is);
 
         return true;
     }
@@ -79,7 +90,7 @@ class SinosController : public ControllerBase
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
         //-- Set position command. The joint angles are received in degrees
-        if( cmd == "setpos" ) {
+        if( cmd == "setamplitude" ) {
             /*
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
                 dReal pos;
@@ -111,6 +122,12 @@ class SinosController : public ControllerBase
 protected:
     RobotBasePtr _probot;
     ControllerBasePtr _pservocontroller;
+    dReal _samplingtics;
+    dReal _samplingperiod;
+    int _N;                   //-- Number of samples
+    dReal _period;            //-- Oscilation period in seconds
+    dReal _phase;
+    std::vector<dReal> _ref_pos;  //-- Reference positions for the servos (in degrees)
 
 };
 
