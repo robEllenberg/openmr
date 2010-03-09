@@ -34,6 +34,11 @@ class SinosController : public ControllerBase
         _pservocontroller = GetEnv()->CreateController("servocontroller");
         _pservocontroller->Init(_probot,"");
 
+        _ref_pos.resize(_probot->GetDOF());
+        _amplitude.resize(_probot->GetDOF());
+        _phase0.resize(_probot->GetDOF());
+        _offset.resize(_probot->GetDOF());
+
         cout << "OPENMR: Sinoscontroller: INIT" << endl;
 
         Reset(0);
@@ -47,11 +52,6 @@ class SinosController : public ControllerBase
         _N=20;
         _samplingperiod=_period/_N;
         _phase=0;
-
-        _ref_pos.resize(_probot->GetDOF());
-        _amplitude.resize(_probot->GetDOF());
-        _phase0.resize(_probot->GetDOF());
-        _offset.resize(_probot->GetDOF());
 
         for (int i=0; i<_probot->GetDOF(); i++) {
           _ref_pos[i]=0;
