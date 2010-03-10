@@ -29,6 +29,10 @@ from numpy import *
 import time
 import sys
 
+def trans(T,x,y,z):
+    T[0,3]=x; T[1,3]=y; T[2,3]=z;
+    return T
+
 def run():
 
     #-- Read the name of the xml fiel passed as an argument
@@ -41,11 +45,15 @@ def run():
     env = Environment()
     env.Load(file_env)
     env.SetViewer('qtcoin')
+
     #-- Configure the camera view
-    Tcamera = array (((-0.34606934, -0.51347446,  0.78522629,  0.49086213),
-                      ( 0.93809277, -0.17619586,  0.29822361,  0.21498504),
-                      (-0.01477666,  0.83982098,  0.54266238,  0.28141484)))
-    env.SetCamera(Tcamera)
+    #-- Rotation
+    T = matrixFromQuat(array((0.505073, 0.268078, 0.395983, 0.718493)))
+
+    #-- Translation
+    T=trans(T,0.412915, 0.156822, 0.285362)
+
+    env.SetCamera(T)
 
     with env:
         robot = env.GetRobots()[0]
