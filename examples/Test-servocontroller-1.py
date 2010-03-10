@@ -42,6 +42,12 @@ def run():
     env.Load(file_env)
     env.SetViewer('qtcoin')
 
+    #-- Configure the camera view
+    Tcamera = array (((-0.34606934, -0.51347446,  0.78522629,  0.49086213),
+                      ( 0.93809277, -0.17619586,  0.29822361,  0.21498504),
+                      (-0.01477666,  0.83982098,  0.54266238,  0.28141484)))
+    env.SetCamera(Tcamera)
+
     with env:
         robot = env.GetRobots()[0]
         robot.SetController(env.CreateController('servocontroller'))
