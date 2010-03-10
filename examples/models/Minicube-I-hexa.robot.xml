@@ -1,33 +1,34 @@
 <Robot name="Minicube-I">
   <KinBody name="Minicube-I">
+
    <Body name="Seg1" type="dynamic">
      <Mass type="mimicgeom">
        <total>0.05</total>
      </Mass>
      <Geom type="box">
-       <Extents>0.036 0.026 0.026</Extents>
+       <Extents>0.026 0.036 0.026</Extents>
        <diffuseColor>1.0 1.0 0.0</diffuseColor>
      </Geom>
    </Body>
 
    <Body name="Seg0" type="dynamic">
-     <translation>-0.054 0 0</translation>
+     <translation>0 -0.054 0</translation>
      <Mass type="mimicgeom">
        <total>0.025</total>
      </Mass>
      <Geom type="box">
-       <Extents>0.018 0.025 0.026</Extents>
+       <Extents>0.025 0.018 0.026</Extents>
        <diffuseColor>1.0 0.0 0.0</diffuseColor>
      </Geom>
    </Body>
 
    <Body name="Seg2" type="dynamic">
-     <translation>0.054 0 0</translation>
+     <translation>0 0.054 0</translation>
      <Mass type="mimicgeom">
        <total>0.025</total>
      </Mass>
      <Geom type="box">
-       <Extents>0.018 0.025 0.026</Extents>
+       <Extents>0.025 0.018 0.026</Extents>
        <diffuseColor>1.0 0.0 0.0</diffuseColor>
      </Geom>
    </Body>
@@ -35,8 +36,8 @@
    <Joint type="hinge" name="J1">
       <Body>Seg0</Body>
       <Body>Seg1</Body>
-      <axis>0 1 0</axis>
-      <anchor>-0.036 0 0</anchor>
+      <axis>1 0 0</axis>
+      <anchor>0 -0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
@@ -46,8 +47,8 @@
     <Joint type="hinge" name="J2">
       <Body>Seg1</Body>
       <Body>Seg2</Body>
-      <axis>0 1 0</axis>
-      <anchor>0.036 0 0</anchor>
+      <axis>1 0 0</axis>
+      <anchor>0 0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
