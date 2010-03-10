@@ -48,6 +48,14 @@ int main(int argc, char ** argv)
         penv->Load(envfile);
     }
 
+    //-- Set the transform matrix for the camera view
+    RaveTransformMatrix<float> M;
+    RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
+    RaveVector<float> trans(0.412915, 0.156822, 0.285362);
+    M.trans = trans;
+    M.rotfromquat (rotquad);
+    RaveTransform<float> Tcamera(M);
+
     //-- Get the robot
     std::vector<RobotBasePtr> robots;
     penv->GetRobots(robots);
@@ -62,6 +70,8 @@ int main(int argc, char ** argv)
 
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
+    penv->SetCamera (Tcamera);
+
 
     stringstream is;
     stringstream os;

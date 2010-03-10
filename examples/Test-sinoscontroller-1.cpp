@@ -49,12 +49,12 @@ int main(int argc, char ** argv)
         penv->Load(envfile);
     }
 
+    //-- Set the transform matrix for the camera view
     RaveTransformMatrix<float> M;
-    M.m[0] = -0.34606934; M.m[1] = -0.51347446; M.m[2] =0.78522629 ;  M.m[3] = 0.49086213;
-    M.m[4] = 0.93809277;  M.m[5] = -0.17619586; M.m[6] = 0.29822361;  M.m[7] = 0.21498504;
-    M.m[8] = -0.01477666; M.m[9] = 0.83982098;  M.m[10] = 0.54266238; M.m[11] = 0.28141484;
+    RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
     RaveVector<float> trans(0.412915, 0.156822, 0.285362);
     M.trans = trans;
+    M.rotfromquat (rotquad);
     RaveTransform<float> Tcamera(M);
 
     //-- Get the robot
@@ -87,14 +87,11 @@ int main(int argc, char ** argv)
 
     penv->SetCamera (Tcamera);
 
-    char tecla;
+    char key;
     while(1) {
 
-      cin >> tecla;
-      //penv->SetCamera (Tcamera);
+      cin >> key;
       cout << penv->GetCameraTransform() << endl;
-
-
       //sleep(1);
     }
 
