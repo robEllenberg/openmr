@@ -39,6 +39,7 @@ int main(int argc, char ** argv)
     EnvironmentBasePtr penv = CreateEnvironment(true);
     penv->StopSimulation();
 
+
     boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
     {
         // lock the environment to prevent changes
@@ -47,6 +48,14 @@ int main(int argc, char ** argv)
         // load the scene
         penv->Load(envfile);
     }
+
+    RaveTransformMatrix<float> M;
+    M.m[0] = -0.34606934; M.m[1] = -0.51347446; M.m[2] =0.78522629 ;  M.m[3] = 0.49086213;
+    M.m[4] = 0.93809277;  M.m[5] = -0.17619586; M.m[6] = 0.29822361;  M.m[7] = 0.21498504;
+    M.m[8] = -0.01477666; M.m[9] = 0.83982098;  M.m[10] = 0.54266238; M.m[11] = 0.28141484;
+    RaveVector<float> trans(0.412915, 0.156822, 0.285362);
+    M.trans = trans;
+    RaveTransform<float> Tcamera(M);
 
     //-- Get the robot
     std::vector<RobotBasePtr> robots;
@@ -76,11 +85,19 @@ int main(int argc, char ** argv)
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
 
-    /*
+    penv->SetCamera (Tcamera);
+
+    char tecla;
     while(1) {
-      sleep(1);
+
+      cin >> tecla;
+      //penv->SetCamera (Tcamera);
+      cout << penv->GetCameraTransform() << endl;
+
+
+      //sleep(1);
     }
-    */
+
 
     thviewer.join();
     penv->Destroy();
