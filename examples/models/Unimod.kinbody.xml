@@ -1,5 +1,4 @@
-
-<KinBody name="Y1">
+ <KinBody name="Y1">
    <Body name="Y1-body" type="static">
       <mass type="sphere">
         <total>0.025</total>
@@ -8,7 +7,8 @@
       <Geom type="trimesh">
         <Render>Y1-body.iv 0.001</Render>
         <data>Y1-body.iv 0.001</data>
-        <translation>0 -0.018 -0.007</translation>
+        <rotationaxis>1 0 0 90</rotationaxis>
+        <translation>0 0.007 -0.018</translation>
       </Geom>
     </Body>
 
@@ -20,7 +20,8 @@
       <Geom type="trimesh">
         <Render>Y1-head.iv 0.001</Render>
         <data>Y1-head.iv 0.001</data>
-        <translation>0 0.018 -0.007</translation>
+        <rotationaxis>1 0 0 90</rotationaxis>
+        <translation>0 0.007 0.018</translation>
       </Geom>
     </Body>
 
