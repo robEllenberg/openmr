@@ -24,6 +24,10 @@ set_target_properties(Test-sinoscontroller-1 PROPERTIES COMPILE_FLAGS "${OPENRAV
 set_target_properties(Test-sinoscontroller-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(Test-sinoscontroller-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
+add_executable(Minicube-I-1 Minicube-I-1.cpp)
+set_target_properties(Minicube-I-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(Minicube-I-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(Minicube-I-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
 add_executable(Tricube-I-1 Tricube-I-1.cpp)
 set_target_properties(Tricube-I-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
