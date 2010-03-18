@@ -115,7 +115,9 @@ class ServoController : public ControllerBase
         is >> cmd;
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-        //-- Set position command. The joint angles are received in degrees
+        //-- Set position command.
+        //-- Set the position of all the joints
+        // The joint angles are received in degrees
         if( cmd == "setpos" ) {
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
                 dReal pos;
@@ -127,6 +129,24 @@ class ServoController : public ControllerBase
                 if( !is )
                     return false;
             }
+            return true;
+        }
+        //-- Set the position of 1 joint
+        //-- The format is: servo angle (in degrees)
+        //-- Servo number starts from 0
+        else if ( cmd == "setpos1" ) {
+            cout << "SETPOS1" << endl;
+
+            int servo;
+            dReal pos;
+            is >> servo;
+            is >> pos;
+
+
+
+            //-- TODO: Check errors!!!!!
+            //-- Store the reference positions in radians
+            _ref_pos[servo]=pos*PI/180;
             return true;
         }
 

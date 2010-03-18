@@ -81,7 +81,7 @@ int main(int argc, char ** argv)
       pcontroller->SendCommand(os,is);
       sleep(1);
 
-      is << "setpos -45 -45 ";
+      is << "setpos1 0 -45 ";
       pcontroller->SendCommand(os,is);
       sleep(1);
     }
