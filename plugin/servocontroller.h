@@ -135,13 +135,11 @@ class ServoController : public ControllerBase
         //-- The format is: servo angle (in degrees)
         //-- Servo number starts from 0
         else if ( cmd == "setpos1" ) {
-            cout << "SETPOS1" << endl;
 
             int servo;
             dReal pos;
             is >> servo;
             is >> pos;
-
 
 
             //-- TODO: Check errors!!!!!
