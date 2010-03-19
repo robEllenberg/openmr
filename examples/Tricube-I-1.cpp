@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
 
    if (argc==1)
      //-- Default file
-     envfile="./models/Tricube-I-hexa.env.xml";
+     envfile="./models/Tricube-I.env.xml";
    else
      envfile = argv[1];
 
@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
     is << "setamplitude 45 45 45 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setinitialphase 0 120 240 ";
+    is << "setinitialphase 0 140 280 ";
     pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 0 ";
