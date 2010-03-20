@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
 
    if (argc==1)
      //-- Default file
-     envfile="./models/Minicube-II-hexa.env.xml";
+     envfile="./models/Minicube-II.env.xml";
    else
      envfile = argv[1];
 
@@ -70,11 +70,6 @@ int main(int argc, char ** argv)
     probot->SetController(pcontroller,"");
 
     stringstream os,is;
-    is << "setamplitude 45 0 45 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setinitialphase 0 0 120 ";
-    pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 0 ";
     pcontroller->SendCommand(os,is);
@@ -89,24 +84,16 @@ int main(int argc, char ** argv)
 
     while(1) {
 
-        
-        sleep(10);
-
-        //-- circular path
-	is << "setoffset 0 30 0 ";
-    	pcontroller->SendCommand(os,is);
-        sleep(10);
-
         //-- Sideways movement
         is << "setoffset 0 0 0 ";
     	pcontroller->SendCommand(os,is);
-	is << "setinitialphase 0 90 0 ";
+        is << "setinitialphase 0 90 0 ";
     	pcontroller->SendCommand(os,is);
         is << "setamplitude 30 30 30 ";
         pcontroller->SendCommand(os,is);
         sleep(10);
 
-        //-- sideways movement (oposite direction) 
+        //-- sideways movement (oposite direction)
         is << "setinitialphase 0 -90 0 ";
     	pcontroller->SendCommand(os,is);
         sleep(10);
@@ -116,24 +103,26 @@ int main(int argc, char ** argv)
     	pcontroller->SendCommand(os,is);
         is << "setamplitude 30 60 30 ";
         pcontroller->SendCommand(os,is);
-        sleep(20); 
+        sleep(20);
 
         //-- Preparation to rolling
-	is << "setamplitude 0 0 0 ";
+        is << "setamplitude 0 0 0 ";
         pcontroller->SendCommand(os,is);
         is << "setoffset 0 70 0 ";
     	pcontroller->SendCommand(os,is);
         sleep(2);
 
         //-- Rolling
+        is << "setperiod 2 ";
+        pcontroller->SendCommand(os,is);
         is << "setinitialphase 0 90 0 ";
     	pcontroller->SendCommand(os,is);
         is << "setoffset 0 0 0 ";
         pcontroller->SendCommand(os,is);
-	is << "setamplitude 70 70 70 ";
+        is << "setamplitude 70 70 70 ";
         pcontroller->SendCommand(os,is);
-   	sleep(10);
-      
+        sleep(10);
+
     }
 
 
