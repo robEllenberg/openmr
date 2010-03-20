@@ -45,3 +45,10 @@ set_target_properties(snake PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(snake PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(snake ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
+add_executable(test test.cpp)
+set_target_properties(test PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+
+
+
