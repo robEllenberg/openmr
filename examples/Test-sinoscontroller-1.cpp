@@ -84,7 +84,7 @@ int main(int argc, char ** argv)
 
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
-
+    usleep(1000);
     penv->SetCamera (Tcamera);
 
     char key;
