@@ -70,10 +70,10 @@ int main(int argc, char ** argv)
     probot->SetController(pcontroller,"");
 
     stringstream os,is;
-    is << "setamplitude 45 45 45 ";
+    is << "setamplitude 30 30 30 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setinitialphase 0 140 280 ";
+    is << "setinitialphase 0 150 300 ";
     pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 0 ";
@@ -82,7 +82,7 @@ int main(int argc, char ** argv)
     is << "setperiod 2 ";
     pcontroller->SendCommand(os,is);
 
-    const dReal STEP = 0.005;
+    const dReal STEP = 0.003;
     penv->StartSimulation(STEP);
     usleep(1000);
     penv->SetCamera (Tcamera);
