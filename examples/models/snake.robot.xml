@@ -13,6 +13,7 @@
     <translation>0 0.144 0</translation>
   </Kinbody>
   
+  <!-- y = y + 0.072 -->
   <Kinbody prefix="4" file="YP.body.xml">
     <translation>0 0.216 0</translation>
   </Kinbody>
