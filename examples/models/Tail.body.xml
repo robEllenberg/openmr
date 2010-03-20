@@ -1,5 +1,5 @@
 
-<Kinbody>
+<Kinbody name="ktail">
   <Body name="Tail" type="dynamic">
       <mass type="sphere">
         <total>0.025</total>
