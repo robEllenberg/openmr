@@ -4,7 +4,7 @@
 -->
 
 <Kinbody name="ktail">
-  <Body name="Tail" type="dynamic">
+  <Body name="Tail" type="static">
     <mass type="sphere">
       <total>0.025</total>
       <radius>0.018</radius>

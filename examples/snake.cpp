@@ -74,7 +74,7 @@ int main(int argc, char ** argv)
     is << "setperiod 2 ";
     pcontroller->SendCommand(os,is);
 
-     is << "setoffset 60 60 60 60 60 60 60 ";
+     is << "setoffset 50 50 50 50 50 50 50 50 50 ";
     pcontroller->SendCommand(os,is);
 
     const dReal STEP = 0.005;
