@@ -71,10 +71,10 @@ int main(int argc, char ** argv)
 
     stringstream os,is;
 
-    is << "setoffset 0 0 0 0 0 ";
+    is << "setperiod 2 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setperiod 2 ";
+     is << "setoffset 60 60 60 60 60 60 60 ";
     pcontroller->SendCommand(os,is);
 
     const dReal STEP = 0.005;
@@ -84,13 +84,6 @@ int main(int argc, char ** argv)
 
     while(1) {
 
-        //-- Sideways movement
-        is << "setoffset 0 0 0 0 0 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setinitialphase 0 0 0 0 0 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setamplitude 30 30 30 30 30 ";
-        pcontroller->SendCommand(os,is);
         sleep(10);
 
     }
