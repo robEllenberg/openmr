@@ -52,8 +52,23 @@
       <translation>0 0.936 0</translation>
   </Kinbody>
 
-  <Kinbody file="HeadP.kinbody.xml">
+  <Kinbody prefix="15" file="PY.kinbody.xml">
       <translation>0 1.008 0</translation>
+  </Kinbody>
+  <Kinbody prefix="16" file="YP.kinbody.xml">
+      <translation>0 1.080 0</translation>
+  </Kinbody>
+
+  <Kinbody prefix="17" file="PY.kinbody.xml">
+      <translation>0 1.152 0</translation>
+  </Kinbody>
+  <Kinbody prefix="18" file="YP.kinbody.xml">
+      <translation>0 1.224 0</translation>
+  </Kinbody>
+
+
+  <Kinbody file="HeadP.kinbody.xml">
+      <translation>0 1.296 0</translation>
   </Kinbody>
 
    <Joint type="hinge" name="J1">
@@ -170,7 +185,7 @@
       <Body>10Seg</Body>
       <Body>11Seg</Body>
       <offsetfrom>11Seg</offsetfrom>
-      <axis>0 0 1</axis>
+      <axis>1 0 0</axis>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
@@ -192,7 +207,7 @@
       <Body>12Seg</Body>
       <Body>13Seg</Body>
       <offsetfrom>13Seg</offsetfrom>
-      <axis>0 0 1</axis>
+      <axis>1 0 0</axis>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
@@ -210,10 +225,52 @@
       <histop>90</histop>
     </Joint>
 
-
-
     <Joint type="hinge" name="J15">
       <Body>14Seg</Body>
+      <Body>15Seg</Body>
+      <offsetfrom>15Seg</offsetfrom>
+      <axis>1 0 0</axis>
+      <maxtorque>0.4</maxtorque>
+      <maxvel>4.5</maxvel>
+      <lostop>-90</lostop>
+      <histop>90</histop>
+    </Joint>
+
+    <Joint type="hinge" name="J16">
+      <Body>15Seg</Body>
+      <Body>16Seg</Body>
+      <offsetfrom>16Seg</offsetfrom>
+      <axis>0 0 1</axis>
+      <maxtorque>0.4</maxtorque>
+      <maxvel>4.5</maxvel>
+      <lostop>-90</lostop>
+      <histop>90</histop>
+    </Joint>
+
+    <Joint type="hinge" name="J17">
+      <Body>16Seg</Body>
+      <Body>17Seg</Body>
+      <offsetfrom>17Seg</offsetfrom>
+      <axis>1 0 0</axis>
+      <maxtorque>0.4</maxtorque>
+      <maxvel>4.5</maxvel>
+      <lostop>-90</lostop>
+      <histop>90</histop>
+    </Joint>
+
+    <Joint type="hinge" name="J18">
+      <Body>17Seg</Body>
+      <Body>18Seg</Body>
+      <offsetfrom>18Seg</offsetfrom>
+      <axis>0 0 1</axis>
+      <maxtorque>0.4</maxtorque>
+      <maxvel>4.5</maxvel>
+      <lostop>-90</lostop>
+      <histop>90</histop>
+    </Joint>
+
+    <Joint type="hinge" name="J19">
+      <Body>18Seg</Body>
       <Body>Head</Body>
       <offsetfrom>Head</offsetfrom>
       <axis>1 0 0</axis>
