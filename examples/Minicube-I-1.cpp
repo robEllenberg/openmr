@@ -73,7 +73,7 @@ int main(int argc, char ** argv)
     is << "setamplitude 45 45 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setinitialphase 0 -120 ";
+    is << "setinitialphase 0 120 ";
     pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 ";
@@ -82,7 +82,7 @@ int main(int argc, char ** argv)
     is << "setperiod 2 ";
     pcontroller->SendCommand(os,is);
 
-    const dReal STEP = 0.002;
+    const dReal STEP = 0.001;
     penv->StartSimulation(STEP);
     usleep(1000);
 
