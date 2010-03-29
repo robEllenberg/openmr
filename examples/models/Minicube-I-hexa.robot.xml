@@ -1,43 +1,23 @@
 <Robot name="Minicube-I">
-  <KinBody name="Minicube-I">
+  <KinBody name="kMinicube-I">
 
-   <Body name="Seg1" type="dynamic">
-     <Mass type="mimicgeom">
-       <total>0.05</total>
-     </Mass>
-     <Geom type="box">
-       <Extents>0.026 0.036 0.026</Extents>
-       <diffuseColor>1.0 1.0 0.0</diffuseColor>
-     </Geom>
-   </Body>
+    <!-- The tail of the robot -->
+    <Kinbody file="TailP-hexa.kinbody.xml"/>
 
-   <Body name="Seg0" type="dynamic">
-     <translation>0 -0.054 0</translation>
-     <Mass type="mimicgeom">
-       <total>0.025</total>
-     </Mass>
-     <Geom type="box">
-       <Extents>0.025 0.018 0.026</Extents>
-       <diffuseColor>1.0 0.0 0.0</diffuseColor>
-     </Geom>
-   </Body>
+    <!-- segment in the middle -->
+    <Kinbody prefix="1" file="PP-hexa.kinbody.xml"/>
 
-   <Body name="Seg2" type="dynamic">
-     <translation>0 0.054 0</translation>
-     <Mass type="mimicgeom">
-       <total>0.025</total>
-     </Mass>
-     <Geom type="box">
-       <Extents>0.025 0.018 0.026</Extents>
-       <diffuseColor>1.0 0.0 0.0</diffuseColor>
-     </Geom>
-   </Body>
+    <!-- The head of the robot -->
+    <Kinbody file="HeadP-hexa.kinbody.xml">
+      <translation>0 0.072 0</translation>
+    </Kinbody>
 
-   <Joint type="hinge" name="J1">
-      <Body>Seg0</Body>
-      <Body>Seg1</Body>
+    <!-- Joints -->
+    <Joint type="hinge" name="J1">
+      <Body>Tail</Body>
+      <Body>1Seg</Body>
+      <offsetfrom>1Seg</offsetfrom>
       <axis>1 0 0</axis>
-      <anchor>0 -0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
@@ -45,10 +25,10 @@
     </Joint>
 
     <Joint type="hinge" name="J2">
-      <Body>Seg1</Body>
-      <Body>Seg2</Body>
+      <Body>1Seg</Body>
+      <Body>Head</Body>
+      <offsetfrom>Head</offsetfrom>
       <axis>1 0 0</axis>
-      <anchor>0 0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
       <lostop>-90</lostop>
