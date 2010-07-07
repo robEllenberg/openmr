@@ -45,9 +45,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.979899"
-     inkscape:cx="334.5805"
-     inkscape:cy="797.69718"
+     inkscape:zoom="1.4"
+     inkscape:cx="411.51502"
+     inkscape:cy="805.29941"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -73,25 +73,46 @@
      inkscape:groupmode="layer"
      id="layer1">
     <rect
+       style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect2440"
+       width="526.28949"
+       height="312.13712"
+       x="114.65232"
+       y="37.66396"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
        style="opacity:1;fill:#ff9955;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect4531"
        width="224.28572"
        height="32.142857"
        x="180.71429"
-       y="204.50504" />
+       y="204.50504"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:#0000ff;fill-rule:evenodd;stroke:#0000ff;stroke-width:3;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="M 142.70628,319.49539 L 216.85772,279.29457"
-       id="path2385" />
+       id="path2385"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        id="path2391"
        d="M 378.5298,319.43316 L 460.94904,301.49966"
-       style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:3;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:none;fill-rule:evenodd;stroke:#0000ff;stroke-width:3;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:#0000ff;fill-rule:evenodd;stroke:#0000ff;stroke-width:3;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        d="M 216.81831,279.43724 L 378.41739,319.61759"
        id="path2395"
-       sodipodi:nodetypes="cc" />
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        sodipodi:type="arc"
        style="fill:#ff0000;fill-opacity:1;stroke:#000000;stroke-width:0.42430708;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
@@ -101,17 +122,26 @@
        sodipodi:rx="3.9285715"
        sodipodi:ry="3.9285715"
        d="M 52.500002,25.219324 A 3.9285715,3.9285715 0 1 1 44.642859,25.219324 A 3.9285715,3.9285715 0 1 1 52.500002,25.219324 z"
-       transform="matrix(2.3567838,0,0,2.3567838,103.44039,221.99291)" />
+       transform="matrix(2.3567838,0,0,2.3567838,103.44039,221.99291)"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:1,2;stroke-dashoffset:0"
        d="M 115.1798,260.77516 L 640.67804,260.77516"
-       id="path3213" />
+       id="path3213"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="497.12799"
        y="306.64789"
-       id="text3222"><tspan
+       id="text3222"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan3224"
          x="497.12799"
@@ -121,14 +151,20 @@
        style="font-size:14px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Bitstream Vera Sans"
        x="246.847"
        y="328.37234"
-       id="text3226"><tspan
+       id="text3226"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan3228"
          x="246.847"
          y="328.37234">Joints</tspan></text>
     <g
        id="g3218"
-       style="stroke:#999999;fill:#999999">
+       style="stroke:#999999;fill:#999999"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
       <path
          style="fill:#999999;fill-opacity:1;fill-rule:evenodd;stroke:#999999;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          d="M 222.875,292.59375 L 222.03125,293.15625 L 240.65625,321.21875 L 241.5,320.65625 L 222.875,292.59375 z"
@@ -140,7 +176,10 @@
     </g>
     <g
        id="g3226"
-       style="fill:#999999;stroke:#999999">
+       style="fill:#999999;stroke:#999999"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
       <path
          style="fill:#999999;fill-opacity:1;fill-rule:evenodd;stroke:#999999;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          d="M 366.125,322.1875 L 290.6875,325.4375 L 290.75,326.4375 L 366.15625,323.1875 L 366.125,322.1875 z"
@@ -155,7 +194,10 @@
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="231.18462"
        y="224.69072"
-       id="text4527"><tspan
+       id="text4527"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan4529"
          x="231.18462"
@@ -169,29 +211,47 @@
        sodipodi:rx="3.9285715"
        sodipodi:ry="3.9285715"
        d="M 52.500002,25.219324 A 3.9285715,3.9285715 0 1 1 44.642859,25.219324 A 3.9285715,3.9285715 0 1 1 52.500002,25.219324 z"
-       transform="matrix(2.3567838,0,0,2.3567838,265.30529,258.38357)" />
+       transform="matrix(2.3567838,0,0,2.3567838,265.30529,258.38357)"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow2Mend);stroke-opacity:1"
        d="M 214.64286,269.86217 L 214.64286,240.62843"
-       id="path4540" />
+       id="path4540"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow2Mend);stroke-opacity:1"
        d="M 222.14286,239.75209 L 222.14286,268.98583"
-       id="path5057" />
+       id="path5057"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow2Mend);stroke-opacity:1"
        d="M 375,305.57647 L 375,241.6679"
-       id="path5059" />
+       id="path5059"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;marker-end:url(#Arrow2Mend);stroke-opacity:1"
        d="M 382.5,239.75211 L 382.5,303.66067"
-       id="path5061" />
+       id="path5061"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="496.68478"
        y="225.53906"
-       id="text5063"><tspan
+       id="text5063"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan5065"
          x="496.68478"
@@ -199,10 +259,16 @@
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1, 2;stroke-dashoffset:0;stroke-opacity:1"
        d="M 115.68488,184.50865 L 641.18312,184.50865"
-       id="path5067" />
+       id="path5067"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <g
        id="g5586"
-       transform="matrix(3.8213328,0,0,3.8213328,-851.86353,-433.83098)">
+       transform="matrix(3.8213328,0,0,3.8213328,-851.86353,-433.83098)"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
       <path
          style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          d="M 293.46875,149.41963 L 293.46875,164.4375 L 294.46875,164.4375 L 294.46875,149.41963 L 293.46875,149.41963 z"
@@ -219,7 +285,10 @@
        x="334.50201"
        y="156.05153"
        id="text5594"
-       sodipodi:linespacing="125%"><tspan
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan5596"
          x="334.50201"
@@ -234,13 +303,19 @@
        width="224.28572"
        height="32.142857"
        x="180.71429"
-       y="98.439018" />
+       y="98.439018"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="217.04248"
        y="118.6247"
-       id="text2412"><tspan
+       id="text2412"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan2414"
          x="217.04248"
@@ -250,7 +325,10 @@
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="496.68478"
        y="148.76747"
-       id="text2416"><tspan
+       id="text2416"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan2418"
          x="496.68478"
@@ -258,10 +336,16 @@
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1, 2;stroke-dashoffset:0;stroke-opacity:1"
        d="M 115.68488,79.957862 L 641.18312,79.957862"
-       id="path2420" />
+       id="path2420"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
     <g
        id="g2422"
-       transform="matrix(3.8213328,0,0,3.8213328,-851.86353,-541.41223)">
+       transform="matrix(3.8213328,0,0,3.8213328,-851.86353,-541.41223)"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
       <path
          style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
          d="M 293.46875,154.83871 L 293.46875,164.4375 L 294.46875,164.4375 L 294.46875,154.83871 L 293.46875,154.83871 z"
@@ -278,7 +362,10 @@
        x="354.8656"
        y="65.112556"
        id="text2428"
-       sodipodi:linespacing="125%"><tspan
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          x="354.8656"
          y="65.112556"
@@ -288,17 +375,13 @@
        style="font-size:14px;font-style:normal;font-weight:bold;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans;-inkscape-font-specification:Sans Bold"
        x="497.27472"
        y="66.440025"
-       id="text2436"><tspan
+       id="text2436"
+       inkscape:export-filename="/home/juan/desarrollo/openmr/doc/wiki-figures/rect2440.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"
          id="tspan2438"
          x="497.27472"
          y="66.440025">Higher levels</tspan></text>
-    <rect
-       style="opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       id="rect2440"
-       width="526.28949"
-       height="312.13712"
-       x="114.65232"
-       y="37.66396" />
   </g>
 </svg>

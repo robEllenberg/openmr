@@ -16,6 +16,7 @@
 #define OPENRAVE_MODULAR_ROBOTS_CONTROLLERS_H
 
 #include <math.h>
+#include <fstream>
 
 class ServoController : public ControllerBase
 {
@@ -147,6 +148,22 @@ class ServoController : public ControllerBase
             _ref_pos[servo]=pos*PI/180;
             return true;
         }
+        else if ( cmd == "record_on" ) {
+            string file;
+            is >> file;
+
+            //-- Open the file
+            outFile.open(file.c_str());
+            cout << "RECORD on:" << file << "\n";
+            outFile << "File contents!!\n";
+            return true;
+        }
+        else if ( cmd == "record_off" ) {
+            //-- Close the file
+            outFile.close();
+            cout << "RECORD off\n";
+            return true;
+        }
 
         return true;
     }
@@ -167,6 +184,7 @@ protected:
     std::vector<KinBody::JointPtr> _joints;
     std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
     dReal _KP;                    //-- P controller KP constant
+    ofstream outFile;             //-- Stream file for storing the servo positions
 
 };
 
