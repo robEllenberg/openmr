@@ -192,12 +192,13 @@ class ServoController : public ControllerBase
             outFile << "t=[0:1:" << phi0.size()-1 << "];" << endl;
 
             //-- Graphical properties
-            outFile << "plot(t,phi0,';Servo 0;');" << endl;
+            outFile << "plot(t,phi0,'-');" << endl;
             outFile << "grid on;" << endl;
             outFile << "title('Servos angle')" << endl;
             outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
             outFile << "ylabel('Angle (degrees)')" << endl;
             outFile << "axis([0," << phi0.size()-1 << ",-90, 90])" << endl;
+            outFile << "legend('Servo 0');" << endl;
             outFile << "pause;" << endl;
 
             //-- Close the file
