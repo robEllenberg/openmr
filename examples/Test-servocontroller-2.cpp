@@ -1,12 +1,13 @@
 /*------------------------------------------------------------------------*/
-/* Test-servocontroller1                                                  */
+/* Test-servocontroller2                                                  */
 /*------------------------------------------------------------------------*/
 /* (c) Juan Gonzalez. July-2010                                           */
 /*------------------------------------------------------------------------*/
 /* GPL license                                                            */
 /*------------------------------------------------------------------------*/
 /* Testing the Servocontroller.                                           */
-/* This example set the servo position to 45 and -45 every second         */
+/* This example set the position of the servos 0 and 1 to 45 and -45      */
+/* alternately                                                            */
 /**************************************************************************/
 
 #include <openrave-core.h>
@@ -42,7 +43,7 @@ int main(int argc, char ** argv)
 
    if (argc==1)
      //-- Default file
-     envfile="./models/Unimod1.env.xml";
+     envfile="./models/Unimod2.env.xml";
    else
      envfile = argv[1];
 
@@ -90,15 +91,26 @@ int main(int argc, char ** argv)
     //-- Main loop
     while(1) {
 
-      //-- Set the position of the servo (servo 0) to 45 degrees
-      is << "setpos1 0 45 ";
+      //-- Servo positioning example 1: Using the setpos command. The position
+      //-- of the two servos is given: Servo 0 to 45 and servo 1 to -45
+      is << "setpos 45 -45 ";
       pcontroller->SendCommand(os,is);
 
       //-- Wait one second
       sleep(1);
 
-      //-- Set the position of servo 0 to -45 degrees
+      //-- Servo positioning example 2:
+      //-- One method: using the "setpos" command:
+      //-- is << "setpos -45 45 ";
+      //-- pcontroller->SendCommand(os,is);
+
+      //-- Another method: using the setpos1 command:
+      //-- Seting the servo 0 position:
       is << "setpos1 0 -45 ";
+      pcontroller->SendCommand(os,is);
+
+      //-- Seting the servo 1 position:
+      is << "setpos1 1 45 ";
       pcontroller->SendCommand(os,is);
 
       //-- Wait one second
