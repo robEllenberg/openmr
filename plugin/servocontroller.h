@@ -41,6 +41,10 @@ class ServoController : public ControllerBase
         GetEnv()->GetBodies(bodies);
         _joints = bodies[0]->GetJoints();
 
+        //-- Initialize Recording ticks
+        _rtick=0;
+        _recording=false;
+
         cout << "Servocontroller: INIT" << endl;
 
         Reset(0);
@@ -102,6 +106,16 @@ class ServoController : public ControllerBase
             if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
 
             is << velocity[i] << " ";
+
+            //-- Recording
+            if (_recording and i==0) {
+              phi0.push_back(angle[0]);
+            }
+        }
+
+        if (_recording) {
+          cout << "Tick: " << _rtick << "\n";
+          _rtick++;
         }
 
         //-- Set the joints velocities
@@ -154,13 +168,43 @@ class ServoController : public ControllerBase
 
             //-- Open the file
             outFile.open(file.c_str());
+
+            //-- Initialize the recording tick
+            _rtick=0;
+            _recording=true;
+
             cout << "RECORD on:" << file << "\n";
-            outFile << "File contents!!\n";
+
             return true;
         }
         else if ( cmd == "record_off" ) {
+
+            //-- Write the information in the output file
+
+            //-- Servo angle
+            outFile << "phi0=[";
+            for (size_t i=0; i<phi0.size(); i++) {
+              outFile << phi0[i]*180/PI << ",";
+            }
+            outFile << "];" << endl;
+
+            //-- Time
+            outFile << "t=[0:1:" << phi0.size()-1 << "];" << endl;
+
+            //-- Graphical properties
+            outFile << "plot(t,phi0,';Servo 0;');" << endl;
+            outFile << "grid on;" << endl;
+            outFile << "title('Servos angle')" << endl;
+            outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
+            outFile << "ylabel('Angle (degrees)')" << endl;
+            outFile << "axis([0," << phi0.size()-1 << ",-90, 90])" << endl;
+            outFile << "pause;" << endl;
+
             //-- Close the file
             outFile.close();
+
+            _recording=false;
+
             cout << "RECORD off\n";
             return true;
         }
@@ -184,7 +228,12 @@ protected:
     std::vector<KinBody::JointPtr> _joints;
     std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
     dReal _KP;                    //-- P controller KP constant
+
+    //-- For recording....
     ofstream outFile;             //-- Stream file for storing the servo positions
+    int _rtick;                   //-- Recording ticks
+    bool _recording;              //-- Recording mode
+    std::vector<dReal> phi0;      //-- Servo0 angle
 
 };
 
