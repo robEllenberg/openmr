@@ -40,7 +40,7 @@ def run():
     try:
         file_env = sys.argv[1]
     except IndexError:
-        file_env = 'models/Unimod1.env.xml'
+        file_env = 'models/Unimod2.env.xml'
 
     env = Environment()
     env.Load(file_env)
@@ -63,17 +63,20 @@ def run():
         env.StartSimulation(timestep=0.001)
 
     starttime = time.time()
+
+    #-- In this example, it does not matter the number of servos of the robot
+    #-- All of them are moved to 45 and -45 degrees alternately
     while True:
-        #-- Set the servo 0 position to 45 degrees
-        robot.GetController().SendCommand('setpos1 0 45 ')
+        #-- Set the servo position to 45 degrees for all the servos
+        ref_pos = [45 for j in robot.GetJoints()]
+        robot.GetController().SendCommand('setpos '+' '.join(str(f) for f in ref_pos))
         time.sleep(1.0)
 
 
-        #-- Set the servos0 position to -45
-        robot.GetController().SendCommand('setpos1 0 -45 ')
+        #-- Set the servo position to -45 degrees for all the servos
+        ref_pos = [-45 for j in robot.GetJoints()]
+        robot.GetController().SendCommand('setpos '+' '.join(str(f) for f in ref_pos))
         time.sleep(1.0)
 
 if __name__=='__main__':
     run()
-
-
