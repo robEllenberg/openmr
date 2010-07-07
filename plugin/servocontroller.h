@@ -114,7 +114,7 @@ class ServoController : public ControllerBase
         }
 
         if (_recording) {
-          cout << "Tick: " << _rtick << "\n";
+          //cout << "Tick: " << _rtick << "\n";
           _rtick++;
         }
 
@@ -207,6 +207,7 @@ class ServoController : public ControllerBase
             _recording=false;
 
             cout << "RECORD off\n";
+            cout << "Max vel: " << _joints[0]->GetMaxVel() << endl;
             return true;
         }
 
