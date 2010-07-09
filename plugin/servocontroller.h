@@ -18,6 +18,9 @@
 #include <math.h>
 #include <fstream>
 
+//-- Time vector
+typedef std::vector<dReal> tvector;
+
 class ServoController : public ControllerBase
 {
  public:
@@ -41,9 +44,13 @@ class ServoController : public ControllerBase
         GetEnv()->GetBodies(bodies);
         _joints = bodies[0]->GetJoints();
 
-        //-- Initialize Recording ticks
-        _rtick=0;
+        //-- Initialize the Recording mode
         _recording=false;
+
+        //-- Initialize the vector for the recording mode
+        _phi_tvec.resize(_joints.size());
+        _ref_tvec.resize(_joints.size());
+
 
         cout << "Servocontroller: INIT" << endl;
 
@@ -107,15 +114,9 @@ class ServoController : public ControllerBase
 
             is << velocity[i] << " ";
 
-            //-- Recording
-            if (_recording and i==0) {
-              phi0.push_back(angle[0]);
-            }
-        }
-
-        if (_recording) {
-          //cout << "Tick: " << _rtick << "\n";
-          _rtick++;
+            //-- Store the current sample (only in recording mode)
+            if (_recording)
+              _phi_tvec[i].push_back(angle[0]);
         }
 
         //-- Set the joints velocities
@@ -169,8 +170,7 @@ class ServoController : public ControllerBase
             //-- Open the file
             outFile.open(file.c_str());
 
-            //-- Initialize the recording tick
-            _rtick=0;
+            //-- Seting the recording mode
             _recording=true;
 
             cout << "RECORD on:" << file << "\n";
@@ -181,24 +181,48 @@ class ServoController : public ControllerBase
 
             //-- Write the information in the output file
 
-            //-- Servo angle
-            outFile << "phi0=[";
-            for (size_t i=0; i<phi0.size(); i++) {
-              outFile << phi0[i]*180/PI << ",";
+            //-- Servos angle
+
+            for (size_t s=0; s<_phi_tvec.size(); s++) {
+              cout << "Writing: " << s << endl;
+              outFile << "phi" << s <<"=[";
+              for (size_t t=0; t<_phi_tvec[s].size(); t++) {
+                outFile << _phi_tvec[s][t]*180/PI << ",";
+              }
+              outFile << "];" << endl;
             }
-            outFile << "];" << endl;
 
             //-- Time
-            outFile << "t=[0:1:" << phi0.size()-1 << "];" << endl;
+            outFile << "t=[0:1:" << _phi_tvec[0].size()-1 << "];" << endl;
 
-            //-- Graphical properties
-            outFile << "plot(t,phi0,'-');" << endl;
+            //-- Plot the servo angles
+            outFile << "plot(";
+            for (size_t s=0; s<_phi_tvec.size(); s++) {
+              outFile << "t,phi" << s << ",'-'";
+
+              //-- Add a ',' except for the last element
+              if (s<_phi_tvec.size()-1)
+                outFile << ",";
+            }
+            outFile << ");" << endl;
+
+            //-- Add the legents
+            outFile << "legend(";
+            for (size_t s=0; s<_phi_tvec.size(); s++) {
+              outFile << "'Servo " << s << "'";
+
+              //-- Add a ',' except for the last element
+              if (s<_phi_tvec.size()-1)
+                outFile << ",";
+            }
+            outFile << ");" << endl;
+
+
             outFile << "grid on;" << endl;
             outFile << "title('Servos angle')" << endl;
             outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
             outFile << "ylabel('Angle (degrees)')" << endl;
-            outFile << "axis([0," << phi0.size()-1 << ",-90, 90])" << endl;
-            outFile << "legend('Servo 0');" << endl;
+            outFile << "axis([0," << _phi_tvec[0].size()-1 << ",-90, 90])" << endl;
             outFile << "pause;" << endl;
 
             //-- Close the file
@@ -232,10 +256,10 @@ protected:
     dReal _KP;                    //-- P controller KP constant
 
     //-- For recording....
-    ofstream outFile;             //-- Stream file for storing the servo positions
-    int _rtick;                   //-- Recording ticks
-    bool _recording;              //-- Recording mode
-    std::vector<dReal> phi0;      //-- Servo0 angle
+    ofstream outFile;                 //-- Stream file for storing the servo positions
+    bool _recording;                  //-- Recording mode
+    std::vector<tvector> _phi_tvec;     //-- Servo's angles in time
+    std::vector<tvector> _ref_tvec;     //-- Servo's reference positions in time
 
 };
 
