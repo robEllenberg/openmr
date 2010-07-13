@@ -115,8 +115,10 @@ class ServoController : public ControllerBase
             is << velocity[i] << " ";
 
             //-- Store the current sample (only in recording mode)
-            if (_recording)
+            if (_recording) {
               _phi_tvec[i].push_back(angle[0]);
+              _ref_tvec[i].push_back(_ref_pos[i]);
+            }
         }
 
         //-- Set the joints velocities
@@ -180,50 +182,7 @@ class ServoController : public ControllerBase
         else if ( cmd == "record_off" ) {
 
             //-- Write the information in the output file
-
-            //-- Servos angle
-
-            for (size_t s=0; s<_phi_tvec.size(); s++) {
-              cout << "Writing: " << s << endl;
-              outFile << "phi" << s <<"=[";
-              for (size_t t=0; t<_phi_tvec[s].size(); t++) {
-                outFile << _phi_tvec[s][t]*180/PI << ",";
-              }
-              outFile << "];" << endl;
-            }
-
-            //-- Time
-            outFile << "t=[0:1:" << _phi_tvec[0].size()-1 << "];" << endl;
-
-            //-- Plot the servo angles
-            outFile << "plot(";
-            for (size_t s=0; s<_phi_tvec.size(); s++) {
-              outFile << "t,phi" << s << ",'-'";
-
-              //-- Add a ',' except for the last element
-              if (s<_phi_tvec.size()-1)
-                outFile << ",";
-            }
-            outFile << ");" << endl;
-
-            //-- Add the legents
-            outFile << "legend(";
-            for (size_t s=0; s<_phi_tvec.size(); s++) {
-              outFile << "'Servo " << s << "'";
-
-              //-- Add a ',' except for the last element
-              if (s<_phi_tvec.size()-1)
-                outFile << ",";
-            }
-            outFile << ");" << endl;
-
-
-            outFile << "grid on;" << endl;
-            outFile << "title('Servos angle')" << endl;
-            outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
-            outFile << "ylabel('Angle (degrees)')" << endl;
-            outFile << "axis([0," << _phi_tvec[0].size()-1 << ",-90, 90])" << endl;
-            outFile << "pause;" << endl;
+            generate_octave_file();
 
             //-- Close the file
             outFile.close();
@@ -247,6 +206,75 @@ class ServoController : public ControllerBase
         return 0;
     }
     virtual RobotBasePtr GetRobot() const { return _probot; }
+
+private:
+
+  void generate_octave_file(void)
+  {
+    //-- Servos angle
+    for (size_t s=0; s<_phi_tvec.size(); s++) {
+      outFile << "phi" << s <<"=[";
+      for (size_t t=0; t<_phi_tvec[s].size(); t++) {
+        outFile << _phi_tvec[s][t]*180/PI << ",";
+      }
+      outFile << "];" << endl;
+    }
+
+    //-- Reference positions
+    for (size_t s=0; s<_ref_tvec.size(); s++) {
+      outFile << "ref" << s <<"=[";
+      for (size_t t=0; t<_ref_tvec[s].size(); t++) {
+        outFile << _ref_tvec[s][t]*180/PI << ",";
+      }
+      outFile << "];" << endl;
+    }
+
+    //-- Time
+    outFile << "t=[0:1:" << _phi_tvec[0].size()-1 << "];" << endl;
+
+    //-- Plot the servo angles
+    outFile << "plot(";
+    for (size_t s=0; s<_phi_tvec.size(); s++) {
+      outFile << "t,phi" << s << ",'-'";
+
+      //-- Add a ',' except for the last element
+      if (s<_phi_tvec.size()-1)
+        outFile << ",";
+    }
+    outFile << ");" << endl;
+
+    //-- Plot the reference positions
+    outFile << "hold on;";
+    outFile << "plot(";
+    for (size_t s=0; s<_ref_tvec.size(); s++) {
+      outFile << "t,ref" << s << ",'-'";
+
+      //-- Add a ',' except for the last element
+      if (s<_ref_tvec.size()-1)
+        outFile << ",";
+    }
+    outFile << ");" << endl;
+
+
+    //-- Add the legents
+    outFile << "legend(";
+    for (size_t s=0; s<_phi_tvec.size(); s++) {
+      outFile << "'Servo " << s << "'";
+
+      //-- Add a ',' except for the last element
+      if (s<_phi_tvec.size()-1)
+        outFile << ",";
+    }
+    outFile << ");" << endl;
+
+
+    outFile << "grid on;" << endl;
+    outFile << "title('Servos angle')" << endl;
+    outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
+    outFile << "ylabel('Angle (degrees)')" << endl;
+    outFile << "axis([0," << _phi_tvec[0].size()-1 << ",-90, 90])" << endl;
+    outFile << "pause;" << endl;
+  }
 
 protected:
     RobotBasePtr _probot;
