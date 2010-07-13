@@ -270,7 +270,7 @@ private:
 
     outFile << "grid on;" << endl;
     outFile << "title('Servos angle')" << endl;
-    outFile << "xlabel('Time (Tics of 0.05 sec)')" << endl;
+    outFile << "xlabel('Simulation time')" << endl;
     outFile << "ylabel('Angle (degrees)')" << endl;
     outFile << "axis([0," << _phi_tvec[0].size()-1 << ",-90, 90])" << endl;
     outFile << "pause;" << endl;
