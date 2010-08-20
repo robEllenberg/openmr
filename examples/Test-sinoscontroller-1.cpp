@@ -54,7 +54,7 @@ int main(int argc, char ** argv)
     RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
     RaveVector<float> trans(0.412915, 0.156822, 0.285362);
     M.trans = trans;
-    M.rotfromquat (rotquad);
+    //M.rotfromquat (rotquad);
     RaveTransform<float> Tcamera(M);
 
     //-- Get the robot
@@ -85,13 +85,13 @@ int main(int argc, char ** argv)
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
     usleep(1000);
-    penv->SetCamera (Tcamera);
+    //penv->SetCamera (Tcamera);
 
     char key;
     while(1) {
 
       cin >> key;
-      cout << penv->GetCameraTransform() << endl;
+      //cout << penv->GetCameraTransform() << endl;
       //sleep(1);
     }
 

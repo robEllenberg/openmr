@@ -24,7 +24,7 @@ using namespace std;
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    RaveViewerBasePtr viewer = penv->CreateViewer(viewername);
+    ViewerBasePtr viewer = penv->CreateViewer(viewername);
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
@@ -49,14 +49,13 @@ int main(int argc, char ** argv)
     // create the main environment
     EnvironmentBasePtr penv = CreateEnvironment(true);
     penv->StopSimulation();
+    penv->SetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    {
-        // lock the environment to prevent changes
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
-
-        // load the scene
-        penv->Load(envfile);
+    // load the scene
+    if( !penv->Load(envfile) ) {
+        penv->Destroy();
+        return 2;
     }
 
     //-- Set the transform matrix for the camera view
@@ -64,7 +63,7 @@ int main(int argc, char ** argv)
     RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
     RaveVector<float> trans(0.412915, 0.156822, 0.285362);
     M.trans = trans;
-    M.rotfromquat (rotquad);
+    //M.rotfromquat (rotquad);
     RaveTransform<float> Tcamera(M);
 
     //-- Get the robot
@@ -81,7 +80,7 @@ int main(int argc, char ** argv)
 
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
-    penv->SetCamera (Tcamera);
+    //penv->SetCamera (Tcamera);
 
 
     stringstream is;
