@@ -11,9 +11,13 @@ using namespace OpenRAVE;
 using namespace std;
 
 
+//models/Cube5-I.env.xml
+
+ViewerBasePtr viewer;
+
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    RaveViewerBasePtr viewer = penv->CreateViewer(viewername);
+    viewer = penv->CreateViewer(viewername);
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
@@ -38,24 +42,20 @@ int main(int argc, char ** argv)
     // create the main environment
     EnvironmentBasePtr penv = CreateEnvironment(true);
     penv->StopSimulation();
-
+    penv->SetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    {
-        // lock the environment to prevent changes
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
-
-        // load the scene
-        penv->Load(envfile);
+    // load the scene
+    if( !penv->Load(envfile) ) {
+        penv->Destroy();
+        return 2;
     }
 
-    //-- Set the transform matrix for the camera view
-    RaveTransformMatrix<float> M;
-    RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
-    RaveVector<float> trans(0.412915, 0.156822, 0.285362);
-    M.trans = trans;
-    //M.rotfromquat (rotquad);
-    RaveTransform<float> Tcamera(M);
+    //-- Set the transform for the camera view
+    RaveVector<float> rotation(0.426572, 0.285257, 0.469795, 0.718301);
+    RaveVector<float> translation(0.589395, 0.0782605, 0.262882);
+    RaveTransform<float> T(rotation,translation);
+    viewer->SetCamera(T);
 
     //-- Get the robot
     std::vector<RobotBasePtr> robots;
@@ -73,19 +73,17 @@ int main(int argc, char ** argv)
     is << "setamplitude 40 40 40 40 40 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setinitialphase 0 144 288 432 576 ";
+    is << "setinitialphase 0 -144 -288 -432 -576 ";
     pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 0 0 0 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setperiod 2 ";
+    is << "setperiod 1.5 ";
     pcontroller->SendCommand(os,is);
 
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
-    usleep(1000);
-    //penv->SetCamera (Tcamera);
 
     while(1) {
       sleep(1);
