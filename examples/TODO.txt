@@ -1,0 +1,9 @@
+Bugs found:
+
+
+* 2010/08/21:
+-> Sometimes, when executing the examples test-servocontroller2 and 3, the
+   test1.m file is not correctly generated and an error ocurs when the
+   octave test.m command is invoked. This is because the lenght of the 
+   different vectors (phi0, phi1, ref0, ref1 and t) is not the same. They 
+   differ by 1 elements. But sometimes they are the same size.
