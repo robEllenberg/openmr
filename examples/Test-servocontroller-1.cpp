@@ -24,6 +24,8 @@ using namespace std;
 
 ViewerBasePtr viewer;
 
+//envfile="./models/Cube3-I.env.xml";
+
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
     viewer = penv->CreateViewer(viewername);
