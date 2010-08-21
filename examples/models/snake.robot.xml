@@ -33,8 +33,7 @@
       <anchor>0 -0.036 0.007</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <limitsdeg>-90 90</limitsdeg>
     </Joint>
 
     <Joint type="hinge" name="J2">
@@ -45,8 +44,7 @@
       <anchor>-0.007 -0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <limitsdeg>-90 90</limitsdeg>
     </Joint>
 
     <Joint type="hinge" name="J3">
@@ -57,8 +55,7 @@
       <anchor>0 -0.036 0.007</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <limitsdeg>-90 90</limitsdeg>
     </Joint>
 
     <Joint type="hinge" name="J4">
@@ -69,8 +66,7 @@
       <anchor>-0.007 -0.036 0</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <limitsdeg>-90 90</limitsdeg>
     </Joint>
 
     <Joint type="hinge" name="J5">
@@ -81,8 +77,7 @@
       <anchor>0 -0.018 0.007</anchor>
       <maxtorque>0.4</maxtorque>
       <maxvel>4.5</maxvel>
-      <lostop>-90</lostop>
-      <histop>90</histop>
+      <limitsdeg>-90 90</limitsdeg>
     </Joint>
 
   </KinBody>

@@ -43,11 +43,6 @@ set_target_properties(Minicube-I-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS
 set_target_properties(Minicube-I-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(Minicube-I-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
-add_executable(Tricube-I-1 Tricube-I-1.cpp)
-set_target_properties(Tricube-I-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(Tricube-I-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(Tricube-I-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
-
 add_executable(Cube3-I Cube3-I.cpp)
 set_target_properties(Cube3-I PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(Cube3-I PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
