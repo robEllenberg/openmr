@@ -22,10 +22,12 @@
 using namespace OpenRAVE;
 using namespace std;
 
+ViewerBasePtr viewer;
+
 
 void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 {
-    RaveViewerBasePtr viewer = penv->CreateViewer(viewername);
+    viewer = penv->CreateViewer(viewername);
     BOOST_ASSERT(!!viewer);
 
     // attach it to the environment:
@@ -50,23 +52,20 @@ int main(int argc, char ** argv)
     // create the main environment
     EnvironmentBasePtr penv = CreateEnvironment(true);
     penv->StopSimulation();
+    penv->SetDebugLevel(Level_Debug);
 
     boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    {
-        // lock the environment to prevent changes
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
-
-        // load the scene
-        penv->Load(envfile);
+    // load the scene
+    if( !penv->Load(envfile) ) {
+        penv->Destroy();
+        return 2;
     }
 
-    //-- Set the transform matrix for the camera view
-    RaveTransformMatrix<float> M;
-    RaveVector<float> rotquad(0.505073, 0.268078, 0.395983, 0.718493);
-    RaveVector<float> trans(0.412915, 0.156822, 0.285362);
-    M.trans = trans;
-    //M.rotfromquat (rotquad);
-    RaveTransform<float> Tcamera(M);
+    //-- Set the transform for the camera view
+    RaveVector<float> rotation(-0.255844, -0.19416, 0.54046, 0.777655);
+    RaveVector<float> translation(-0.155229, 0.230973, 0.118655);
+    RaveTransform<float> T(rotation,translation);
+    viewer->SetCamera(T);
 
     //-- Get the robot
     std::vector<RobotBasePtr> robots;
@@ -82,8 +81,7 @@ int main(int argc, char ** argv)
 
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
-    //penv->SetCamera (Tcamera);
-
+    
 
     stringstream is;
     stringstream os;
@@ -115,6 +113,10 @@ int main(int argc, char ** argv)
 
       //-- Wait one second
       sleep(1);
+
+      //-- Debug! Show the viewer transformation
+      //RaveTransform<float> t = viewer->GetCameraTransform();
+      //cout << "Transform: " << t << endl;
     }
 
     thviewer.join(); // wait for the viewer thread to exit
