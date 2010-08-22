@@ -71,13 +71,16 @@ int main(int argc, char ** argv)
     is << "setamplitude 60 60 60 ";
     pcontroller->SendCommand(os,is);
 
-    is << "setinitialphase 0 -120 -240 ";
+    is << "setinitialphase 0 120 240 ";
     pcontroller->SendCommand(os,is);
 
     is << "setoffset 0 0 0 ";
     pcontroller->SendCommand(os,is);
 
     is << "setperiod 1.5 ";
+    pcontroller->SendCommand(os,is);
+
+    is << "oscillation on ";
     pcontroller->SendCommand(os,is);
 
     const dReal STEP = 0.001;

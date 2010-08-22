@@ -48,10 +48,12 @@ class SinosController : public ControllerBase
     virtual void Reset(int options)
     {
         _samplingtics=0;
-        _period=1.5;
+        _period=1;
         _N=20;
-        _samplingperiod=_period/_N;
+        _n=0;
         _phase=0;
+        _cycletime=0;
+        _oscillating=false;
 
         for (int i=0; i<_probot->GetDOF(); i++) {
           _ref_pos[i]=0;
@@ -59,8 +61,7 @@ class SinosController : public ControllerBase
           _phase0[i]=0;
           _offset[i]=0;
         }
-
-         cout<<"Sampling period: " << _samplingperiod << endl;
+        SetRefPos();
     }
 
     virtual bool SetDesired(const std::vector<dReal>& values)
@@ -77,24 +78,23 @@ class SinosController : public ControllerBase
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
+        //-- Simulate the servos
         _pservocontroller->SimulationStep(fTimeElapsed);
-        _samplingtics += fTimeElapsed;
-        if (_samplingtics < _samplingperiod) return true;
 
-        _samplingtics=0;
-        _phase += 360.0/_N;
+        //-- If the oscillating mode is not set, return
+        if (!_oscillating) return true;
 
-        stringstream os, is;
-        is << "setpos ";
+        _samplingperiod = round(_period/(_N*fTimeElapsed));
+        _samplingtics ++;
+        //cout << "Sampling tics: " << _samplingtics << endl;
 
-        //-- Calculate the next samples
-        for (size_t i=0; i<_ref_pos.size(); i++) {
-            _ref_pos[i]=_amplitude[i]*sin(_phase*PI/180 + _phase0[i]*PI/180) + _offset[i];
-            is<<_ref_pos[i]<<" ";
+        if (_samplingtics == _samplingperiod) {
+          _samplingtics=0;
+          _n++;
+        
+          //-- Calculate the next positions
+          SetRefPos();
         }
-
-        //-- Set the new servos reference positions
-        _pservocontroller->SendCommand(os,is);
 
         return true;
     }
@@ -114,6 +114,7 @@ class SinosController : public ControllerBase
                 if( !is )
                     return false;
             }
+            SetRefPos();
             return true;
         }
         else if ( cmd == "setinitialphase" ) {
@@ -123,6 +124,7 @@ class SinosController : public ControllerBase
                 if( !is )
                     return false;
             }
+            SetRefPos();
             return true;
         }
         else if ( cmd == "setoffset" ) {
@@ -132,13 +134,22 @@ class SinosController : public ControllerBase
                 if( !is )
                     return false;
             }
+            SetRefPos();
             return true;
         }
         else if ( cmd == "setperiod" ) {
             is >> _period;
             _samplingperiod=_period/_N;
-
+            SetRefPos();
             return true;
+        }
+        else if ( cmd == "oscillation" ) {
+          string mode;
+          is >> mode;
+
+          if (mode=="on") _oscillating=true;
+          else _oscillating=false;
+          return true;
         }
 
         return true;
@@ -154,18 +165,41 @@ class SinosController : public ControllerBase
     }
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
+private:
+    //-- Calculate the reference position and send to the servos
+    void SetRefPos() 
+    { 
+        stringstream os, is;
+        is << "setpos ";
+       
+        for (size_t i=0; i<_ref_pos.size(); i++) {
+          _ref_pos[i]=_amplitude[i]*sin(-(360.0*_n)/(float)_N *PI/180.0 + _phase0[i]*PI/180) + _offset[i];
+          is<<_ref_pos[i]<<" ";
+        }
+
+        //-- Set the new servos reference positions
+        _pservocontroller->SendCommand(os,is);
+
+        //-- Debug
+        //cout << "n=" << _n << " Ref0: " << _ref_pos[0] << " Ref1: " << _ref_pos[1] << endl;
+    }
+
 protected:
     RobotBasePtr _probot;
     ControllerBasePtr _pservocontroller;
-    dReal _samplingtics;
-    dReal _samplingperiod;
+    int _samplingtics;
+    int _samplingperiod;
+    dReal _cycletime;
+    bool _oscillating;        //-- State of the oscillator: oscillating true/false
     int _N;                   //-- Number of samples
+    int _n;                   //-- Discrette time
     dReal _period;            //-- Oscilation period in seconds
     dReal _phase;
     std::vector<dReal> _ref_pos;   //-- Reference positions for the servos (in degrees)
     std::vector<dReal> _amplitude; //-- Oscillation amplitudes
     std::vector<dReal> _phase0;    //-- Oscillation initial phase
     std::vector<dReal> _offset;    //-- Oscillation offset
+
 
 };
 

@@ -7,3 +7,5 @@ Bugs found:
    octave test.m command is invoked. This is because the lenght of the 
    different vectors (phi0, phi1, ref0, ref1 and t) is not the same. They 
    differ by 1 elements. But sometimes they are the same size.
+
+-> FIX: Add cmd oscillation on to all the examples!

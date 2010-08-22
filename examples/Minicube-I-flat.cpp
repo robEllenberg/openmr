@@ -12,8 +12,15 @@ using namespace std;
 
 
 ViewerBasePtr viewer;
+EnvironmentBasePtr penv;
+RobotBasePtr probot;
+ControllerBasePtr pcontroller;
 
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+const dReal STEP = 0.005;
+const dReal PERIOD = 2;
+const int SimulationCycles = 1;
+
+void SetViewer(const string& viewername)
 {
     viewer = penv->CreateViewer(viewername);
     BOOST_ASSERT(!!viewer);
@@ -27,6 +34,78 @@ void SetViewer(EnvironmentBasePtr penv, const string& viewername)
 
 }
 
+void InitRobot(dReal amplitude, dReal period, dReal pd)
+{
+    //-- Get the robot
+    std::vector<RobotBasePtr> robots;
+    penv->GetRobots(robots);
+
+    //-- Robot 0
+    probot = robots[0];
+    cout << "Robot: " << probot->GetName() << endl;
+
+    //-- Load the controller
+    pcontroller = penv->CreateController("sinoscontroller");
+    probot->SetController(pcontroller,"");
+
+    stringstream os,is;
+    is << "setamplitude " << amplitude << " " << amplitude << " ";
+    pcontroller->SendCommand(os,is);
+
+    is << "setinitialphase 0 " << pd << " ";
+    pcontroller->SendCommand(os,is);
+
+    is << "setoffset 0 0 ";
+    pcontroller->SendCommand(os,is);
+
+    is << "setperiod " << period << " ";
+    pcontroller->SendCommand(os,is);
+
+    is << "oscillation off ";
+    pcontroller->SendCommand(os,is);
+}
+
+//-- Perform the simulation. Time: fraction of period (in seconds)
+void SimulatePeriod(dReal period, bool realtime=false)
+{
+  int ticks = round(period/STEP);
+
+  //cout << "ticks: " << ticks << endl;
+
+  //-- The robot is set to its initial state!
+  for (int n=0; n<ticks; n++) {
+      penv->StepSimulation(STEP);
+      if (realtime) usleep(STEP*1000000);
+  } 
+}
+
+dReal Evaluation(bool realtime=false)
+{
+    
+    Vector vfin, vini, dist;
+    stringstream os,is;
+
+    vini = probot->GetCenterOfMass();
+    for (int n=0; n<SimulationCycles; n++) {
+      //-- Put the robot in oscillation mode
+      is << "oscillation on ";
+      pcontroller->SendCommand(os,is);
+      SimulatePeriod(PERIOD,realtime);
+      
+      //-- Wait for the servo to reach their final ref. positions
+      is << "oscillation off ";
+      pcontroller->SendCommand(os,is);
+      SimulatePeriod(PERIOD*4/20,realtime);
+    }
+      
+    vfin = probot->GetCenterOfMass();
+    dist = vfin - vini;
+    dReal step = round(dist.y/SimulationCycles*10000)/10;
+    //cout << "Distance: " << round(dist.y*10000)/10 << endl;
+    //cout << "Step: " << round(dist.y/SimulationCycles*10000)/10 << endl; 
+    return step;
+}
+
 int main(int argc, char ** argv)
 {
    string envfile;
@@ -38,11 +117,11 @@ int main(int argc, char ** argv)
      envfile = argv[1];
 
     // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
+    penv = CreateEnvironment(true);
     penv->StopSimulation();
     penv->SetDebugLevel(Level_Debug);
 
-    boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
+    boost::thread thviewer(boost::bind(SetViewer,"qtcoin"));
     // load the scene
     if( !penv->Load(envfile) ) {
         penv->Destroy();
@@ -55,40 +134,33 @@ int main(int argc, char ** argv)
     RaveTransform<float> T(rotation,translation);
     viewer->SetCamera(T);
 
-    //-- Get the robot
-    std::vector<RobotBasePtr> robots;
-    penv->GetRobots(robots);
+    //-- Amplitude, period, phase difference
+    InitRobot(50, PERIOD, 120);
 
-    //-- Robot 0
-    RobotBasePtr probot = robots[0];
-    cout << "Robot: " << probot->GetName() << endl;
-
-    //-- Load the controller
-    ControllerBasePtr pcontroller = penv->CreateController("sinoscontroller");
-    probot->SetController(pcontroller,"");
-
-    stringstream os,is;
-    is << "setamplitude 50 50 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setinitialphase 0 -120 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setoffset 0 0 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setperiod 1.5 ";
-    pcontroller->SendCommand(os,is);
-
-    const dReal STEP = 0.005;
-    penv->StartSimulation(STEP);
+    //-- Wait for the robot to reach the initial state
+    SimulatePeriod(PERIOD);
+    Vector vorigin = probot->GetCenterOfMass();
     
+    Transform t0=probot->GetTransform();
+    cout << "Transform: " << t0 << endl;
+
+    //-- Evaluate the robot!
+    dReal step = Evaluation(true);
+    cout << "Step: " << step << endl;
+
+    Transform t=probot->GetTransform();
+    cout << "Transform: " << t << endl;
+    //probot->SetTransform (const Transform &transform)
+
     char key;
-    while(1) {
-      cin >> key;
-      cout << viewer->GetCameraTransform() << endl;
-      sleep(1);
-    }
+    cin >> key;
+    
+    probot->SetTransform(t0);
+
+    //-- Evaluate the robot!
+    step = Evaluation(true);
+    cout << "Step: " << step << endl;
+
 
     thviewer.join();
     penv->Destroy();
