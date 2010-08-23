@@ -80,6 +80,9 @@ int main(int argc, char ** argv)
     is << "setperiod 2 ";
     pcontroller->SendCommand(os,is);
 
+    is << "oscillation on ";
+    pcontroller->SendCommand(os,is);
+
     const dReal STEP = 0.005;
     penv->StartSimulation(STEP);
     usleep(1000);

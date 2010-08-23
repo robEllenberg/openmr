@@ -1,11 +1,6 @@
 Bugs found:
 
 
-* 2010/08/21:
--> Sometimes, when executing the examples test-servocontroller2 and 3, the
-   test1.m file is not correctly generated and an error ocurs when the
-   octave test.m command is invoked. This is because the lenght of the 
-   different vectors (phi0, phi1, ref0, ref1 and t) is not the same. They 
-   differ by 1 elements. But sometimes they are the same size.
-
--> FIX: Add cmd oscillation on to all the examples!
+-> FIX: Sinoscontroller: If the simulation is stoped with the viewer... then
+   it cannot be restarted agait! Bad if you want to take a video... UPDATE!
+   It sometimes works...

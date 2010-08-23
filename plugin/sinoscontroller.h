@@ -62,6 +62,7 @@ class SinosController : public ControllerBase
           _offset[i]=0;
         }
         SetRefPos();
+        cout << "Reset!" << endl;
     }
 
     virtual bool SetDesired(const std::vector<dReal>& values)
@@ -150,8 +151,22 @@ class SinosController : public ControllerBase
           if (mode=="on") _oscillating=true;
           else _oscillating=false;
           return true;
-        }
+        } 
+        else if ( cmd == "record_on" ) {
+          string file;
+          stringstream os2, is2;
+         
+          is >> file;
 
+          is2 << "record_on " << file << " ";
+          _pservocontroller->SendCommand(os2,is2);  
+        }
+        else if ( cmd == "record_off" ) {
+          stringstream os2, is2;
+
+          is2 << "record_off ";
+          _pservocontroller->SendCommand(os2,is2);  
+        }        
         return true;
     }
 

@@ -211,10 +211,13 @@ private:
 
   void generate_octave_file(void)
   {
+    size_t size = _phi_tvec[0].size();
+    cout << "Size: " << size << endl;
+
     //-- Servos angle
     for (size_t s=0; s<_phi_tvec.size(); s++) {
       outFile << "phi" << s <<"=[";
-      for (size_t t=0; t<_phi_tvec[s].size(); t++) {
+      for (size_t t=0; t<size; t++) {
         outFile << _phi_tvec[s][t]*180/PI << ",";
       }
       outFile << "];" << endl;
@@ -223,14 +226,14 @@ private:
     //-- Reference positions
     for (size_t s=0; s<_ref_tvec.size(); s++) {
       outFile << "ref" << s <<"=[";
-      for (size_t t=0; t<_ref_tvec[s].size(); t++) {
+      for (size_t t=0; t<size; t++) {
         outFile << _ref_tvec[s][t]*180/PI << ",";
       }
       outFile << "];" << endl;
     }
 
     //-- Time
-    outFile << "t=[0:1:" << _phi_tvec[0].size()-1 << "];" << endl;
+    outFile << "t=[0:1:" << size-1 << "];" << endl;
 
     //-- Plot the servo angles
     outFile << "plot(";
@@ -272,7 +275,7 @@ private:
     outFile << "title('Servos angle')" << endl;
     outFile << "xlabel('Simulation time')" << endl;
     outFile << "ylabel('Angle (degrees)')" << endl;
-    outFile << "axis([0," << _phi_tvec[0].size()-1 << ",-90, 90])" << endl;
+    outFile << "axis([0," << size-1 << ",-90, 90])" << endl;
     outFile << "pause;" << endl;
   }
 
