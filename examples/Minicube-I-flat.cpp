@@ -16,9 +16,12 @@ EnvironmentBasePtr penv;
 RobotBasePtr probot;
 ControllerBasePtr pcontroller;
 
-const dReal STEP = 0.005;
+const dReal STEP = 0.001;
 const dReal PERIOD = 2;
-const int SimulationCycles = 1;
+const int SimulationCycles = 100;
+const bool REALTIME = false;
+const int REPETITIONS = 10;
+#define VIEWER 1
 
 void SetViewer(const string& viewername)
 {
@@ -121,18 +124,23 @@ int main(int argc, char ** argv)
     penv->StopSimulation();
     penv->SetDebugLevel(Level_Debug);
 
-    boost::thread thviewer(boost::bind(SetViewer,"qtcoin"));
+#ifdef VIEWER
+      boost::thread thviewer(boost::bind(SetViewer,"qtcoin"));
+#endif
+
     // load the scene
     if( !penv->Load(envfile) ) {
         penv->Destroy();
         return 2;
     }
 
-    //-- Set the transform for the camera view
-    RaveVector<float> rotation(0.426572, 0.285257, 0.469795, 0.718301);
-    RaveVector<float> translation(0.337988, 0.179936, 0.165828);
-    RaveTransform<float> T(rotation,translation);
-    viewer->SetCamera(T);
+#ifdef VIEWER   
+      //-- Set the transform for the camera view
+      RaveVector<float> rotation(0.426572, 0.285257, 0.469795, 0.718301);
+      RaveVector<float> translation(0.337988, 0.179936, 0.165828);
+      RaveTransform<float> T(rotation,translation);
+      viewer->SetCamera(T);
+#endif    
 
     //-- Amplitude, period, phase difference
     InitRobot(50, PERIOD, 120);
@@ -142,27 +150,42 @@ int main(int argc, char ** argv)
     Vector vorigin = probot->GetCenterOfMass();
     
     Transform t0=probot->GetTransform();
-    cout << "Transform: " << t0 << endl;
+    //cout << "Transform: " << t0 << endl;
+
+    cout << "Repetitions: " << REPETITIONS << endl;
+    cout << "Period: " << PERIOD << " sec" << endl;
+    cout << "Simulation Step: " << STEP << " sec" << endl;
+    cout << "Simulation cycles: " << SimulationCycles << endl;
 
     //-- Evaluate the robot!
-    dReal step = Evaluation(true);
-    cout << "Step: " << step << endl;
+    dReal step;
+    for (int n=0; n<REPETITIONS; n++) {
+      step = Evaluation(REALTIME);
+      cout << "n: " << n << ", Step: " << step << endl;
 
-    Transform t=probot->GetTransform();
-    cout << "Transform: " << t << endl;
-    //probot->SetTransform (const Transform &transform)
+      //Transform t=probot->GetTransform();
+      //cout << "Transform: " << t << endl;
+      //probot->SetTransform (const Transform &transform)
 
-    char key;
-    cin >> key;
+      //char key;
+      //cin >> key;
     
-    probot->SetTransform(t0);
+      probot->SetTransform(t0);
+    }
 
     //-- Evaluate the robot!
-    step = Evaluation(true);
-    cout << "Step: " << step << endl;
+    //step = Evaluation(true);
+    //cout << "Step: " << step << endl;
 
 
-    thviewer.join();
+    usleep(10000);
+    cout << "FIN!" << endl;
+
+#ifdef VIEWER
+      thviewer.join();
+#endif
+
+
     penv->Destroy();
     return 0;
 }
