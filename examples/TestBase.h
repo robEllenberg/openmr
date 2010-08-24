@@ -9,6 +9,7 @@ class TestBase
   public:
     TestBase(string ,string,bool showgui=true);
     ~TestBase();
+    void SetCamera(dReal q0, dReal q1, dReal q2, dReal q3, dReal tx, dReal ty, dReal tz);
 
   protected:
     EnvironmentBasePtr penv;

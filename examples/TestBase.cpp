@@ -48,6 +48,16 @@ TestBase::~TestBase()
   penv->Destroy();
 }
 
+void TestBase::SetCamera(dReal q0, dReal q1, dReal q2, dReal q3, dReal tx, dReal ty, dReal tz)
+{
+  //-- Perform the transformation only if the gui is active
+  if (!showgui) return;
+
+  RaveVector<float> rotation(q0,q1,q2,q3);
+  RaveVector<float> translation(tx,ty,tz);
+  RaveTransform<float> T(rotation,translation);
+  viewer->SetCamera(T);
+}
 
 void TestBase::SetViewer()
 {
@@ -60,17 +70,13 @@ void TestBase::SetViewer()
   penv->AttachViewer(viewer);
 
   //-- Set the camera
-  RaveVector<float> rotation(0.426572, 0.285257, 0.469795, 0.718301);
-  RaveVector<float> translation(0.337988, 0.179936, 0.165828);
-  RaveTransform<float> T(rotation,translation);
-  viewer->SetCamera(T);
+  SetCamera(0.427, 0.285, 0.47, 0.718, 0.338, 0.18, 0.166);
 
   // finally you call the viewer's infinite loop
   // (this is why you need a separate thread):
   bool showgui = true;
   viewer->main(showgui);
 }
-
 
 
 
