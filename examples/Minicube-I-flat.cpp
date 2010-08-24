@@ -17,8 +17,8 @@ RobotBasePtr probot;
 ControllerBasePtr pcontroller;
 
 const dReal STEP = 0.001;
-const dReal PERIOD = 2;
-const int SimulationCycles = 100;
+const dReal PERIOD = 10;
+const int SimulationCycles = 2;
 const bool REALTIME = false;
 const int REPETITIONS = 10;
 #define VIEWER 1
@@ -157,6 +157,12 @@ int main(int argc, char ** argv)
     cout << "Simulation Step: " << STEP << " sec" << endl;
     cout << "Simulation cycles: " << SimulationCycles << endl;
 
+    //-- Start recording the servo's angle
+    //stringstream os,is;
+    //is << "record_on test3.m ";
+    //pcontroller->SendCommand(os,is);
+
+
     //-- Evaluate the robot!
     dReal step;
     for (int n=0; n<REPETITIONS; n++) {
@@ -176,6 +182,9 @@ int main(int argc, char ** argv)
     //-- Evaluate the robot!
     //step = Evaluation(true);
     //cout << "Step: " << step << endl;
+
+    //is << "record_off ";
+    //pcontroller->SendCommand(os,is);
 
 
     usleep(10000);

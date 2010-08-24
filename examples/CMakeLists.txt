@@ -16,7 +16,7 @@ link_directories(${OPENRAVE_LINK_DIRS})
 
 #-- Examples for the servocontroller
 
-add_executable(Test-servocontroller-1 Test-servocontroller-1.cpp)
+add_executable(Test-servocontroller-1 Test-servocontroller-1.cpp TestBase.cpp)
 set_target_properties(Test-servocontroller-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(Test-servocontroller-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(Test-servocontroller-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
