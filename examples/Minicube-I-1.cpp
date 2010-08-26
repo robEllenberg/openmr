@@ -26,14 +26,22 @@ void Example::run(dReal step, bool realtime)
   is << "oscillation on ";
   pcontroller->SendCommand(os,is);
 
-  penv->StartSimulation(step);
+  penv->StartSimulation(step, realtime);
 
   while(1);
 }
 
-int main(void)
+int main(int argc, char ** argv)
 {
-  Example example("models/Minicube-I.env.xml","sinoscontroller");
+  string envfile;
+
+  if (argc==1)
+    //-- Default file
+    envfile="./models/Minicube-I.env.xml";
+  else
+    envfile = argv[1];
+
+  Example example(envfile,"sinoscontroller");
   usleep(100000);
   example.SetCamera(0.427, 0.285, 0.47, 0.718, 0.59, 0.078, 0.263);
   example.run(0.005);
