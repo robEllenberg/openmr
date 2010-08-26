@@ -69,11 +69,6 @@ set_target_properties(Minicube-II-1 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAG
 set_target_properties(Minicube-II-1 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(Minicube-II-1 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
-add_executable(Minicube-I-flat Minicube-I-flat.cpp TestBase.cpp)
-set_target_properties(Minicube-I-flat PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(Minicube-I-flat PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(Minicube-I-flat ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
-
 add_executable(snake snake.cpp TestBase.cpp)
 set_target_properties(snake PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(snake PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
