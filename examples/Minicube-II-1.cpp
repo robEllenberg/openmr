@@ -1,134 +1,88 @@
-#include <openrave-core.h>
-#include <vector>
-#include <cstring>
-#include <sstream>
-#include <math.h>
+#include "TestBase.h"
 
-#include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
-
-using namespace OpenRAVE;
-using namespace std;
-
-ViewerBasePtr viewer;
-
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+class Example : public TestBase
 {
-    viewer = penv->CreateViewer(viewername);
-    BOOST_ASSERT(!!viewer);
+  public:
+    Example(string envfile,string controller,bool showgui=true) :
+       TestBase(envfile,controller,showgui) {};
+    void run(dReal step, bool realtime=true);
+};
 
-    // attach it to the environment:
-    penv->AttachViewer(viewer);
+void Example::run(dReal step, bool realtime)
+{
+  stringstream os,is;
 
-    // finally you call the viewer's infinite loop (this is why you need a separate thread):
-    bool showgui = true;
-    viewer->main(showgui);
+  is << "oscillation on ";
+  pcontroller->SendCommand(os,is);
+  penv->StartSimulation(step,realtime);
+
+  while(1) {
+
+    //-- Sideways movement
+    is << "setperiod 1.5 ";
+    pcontroller->SendCommand(os,is);
+    is << "setoffset 0 0 0 ";
+    pcontroller->SendCommand(os,is);
+    is << "setinitialphase 0 90 0 ";
+    pcontroller->SendCommand(os,is);
+    is << "setamplitude 30 30 30 ";
+    pcontroller->SendCommand(os,is);
+    sleep(10);
+
+      //-- sideways movement (oposite direction)
+    is << "setinitialphase 0 -90 0 ";
+    pcontroller->SendCommand(os,is);
+    sleep(10);
+
+      //-- Debug! Show the viewer transformation
+      //RaveTransform<float> t = viewer->GetCameraTransform();
+      //cout << "Transform: " << t << endl;
+
+      //-- Rotating
+    is << "setinitialphase 0 90 180 ";
+    pcontroller->SendCommand(os,is);
+    is << "setamplitude 30 60 30 ";
+    pcontroller->SendCommand(os,is);
+    sleep(20);
+
+      //-- Preparation to rolling
+    is << "setamplitude 0 0 0 ";
+    pcontroller->SendCommand(os,is);
+    is << "setoffset 0 70 0 ";
+    pcontroller->SendCommand(os,is);
+    sleep(2);
+
+      //-- Rolling
+    is << "setperiod 2 ";
+    pcontroller->SendCommand(os,is);
+    is << "setinitialphase 0 90 0 ";
+    pcontroller->SendCommand(os,is);
+    is << "setoffset 0 0 0 ";
+    pcontroller->SendCommand(os,is);
+    is << "setamplitude 70 70 70 ";
+    pcontroller->SendCommand(os,is);
+    sleep(10);
+  }
 
 }
 
 int main(int argc, char ** argv)
 {
-   string envfile;
+  string envfile;
 
-   if (argc==1)
-     //-- Default file
-     envfile="models/Minicube-II.env.xml";
-   else
-     envfile = argv[1];
+  if (argc==1)
+    //-- Default file
+    envfile="./models/Minicube-II.env.xml";
+  else
+    envfile = argv[1];
 
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
-    penv->StopSimulation();
-    penv->SetDebugLevel(Level_Debug);
+  Example example(envfile,"sinoscontroller");
+  usleep(100000);
+  example.SetCamera(0.493, 0.286, 0.378, 0.729,0.557, 0.097, 0.352);
+  example.run(0.001,true);
 
-    boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    // load the scene
-    if( !penv->Load(envfile) ) {
-        penv->Destroy();
-        return 2;
-    }
-
-    //-- Set the transform for the camera view
-    RaveVector<float> rotation(0.49305, 0.286483, 0.378131, 0.729278);
-    RaveVector<float> translation(0.556821, 0.0970071, 0.352475);
-    RaveTransform<float> T(rotation,translation);
-    viewer->SetCamera(T);
-
-
-    //-- Get the robot
-    std::vector<RobotBasePtr> robots;
-    penv->GetRobots(robots);
-
-    //-- Robot 0
-    RobotBasePtr probot = robots[0];
-    cout << "Robot: " << probot->GetName() << endl;
-
-    //-- Load the controller
-    ControllerBasePtr pcontroller = penv->CreateController("sinoscontroller");
-    probot->SetController(pcontroller,"");
-
-    stringstream os,is;
-
-
-    const dReal STEP = 0.001;
-    penv->StartSimulation(STEP);
-
-    while(1) {
-
-        //-- Sideways movement
-        is << "setperiod 1.5 ";
-        pcontroller->SendCommand(os,is);
-        is << "setoffset 0 0 0 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setinitialphase 0 90 0 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setamplitude 30 30 30 ";
-        pcontroller->SendCommand(os,is);
-        sleep(10);
-
-        //-- sideways movement (oposite direction)
-        is << "setinitialphase 0 -90 0 ";
-    	pcontroller->SendCommand(os,is);
-        sleep(10);
-
-        //-- Debug! Show the viewer transformation
-        //RaveTransform<float> t = viewer->GetCameraTransform();
-        //cout << "Transform: " << t << endl;
-
-        //-- Rotating
-        is << "setinitialphase 0 90 180 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setamplitude 30 60 30 ";
-        pcontroller->SendCommand(os,is);
-        sleep(20);
-
-        //-- Preparation to rolling
-        is << "setamplitude 0 0 0 ";
-        pcontroller->SendCommand(os,is);
-        is << "setoffset 0 70 0 ";
-    	pcontroller->SendCommand(os,is);
-        sleep(2);
-
-        //-- Rolling
-        is << "setperiod 2 ";
-        pcontroller->SendCommand(os,is);
-        is << "setinitialphase 0 90 0 ";
-    	pcontroller->SendCommand(os,is);
-        is << "setoffset 0 0 0 ";
-        pcontroller->SendCommand(os,is);
-        is << "setamplitude 70 70 70 ";
-        pcontroller->SendCommand(os,is);
-        sleep(10);
-
-    }
-
-
-    thviewer.join();
-    penv->Destroy();
-    return 0;
+  return 0;
 }
-
-
 
 
 

@@ -1,101 +1,55 @@
-#include <openrave-core.h>
-#include <vector>
-#include <cstring>
-#include <sstream>
-#include <math.h>
+#include "TestBase.h"
 
-#include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
-
-using namespace OpenRAVE;
-using namespace std;
-
-ViewerBasePtr viewer;
-
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+class Example : public TestBase
 {
-    viewer = penv->CreateViewer(viewername);
-    BOOST_ASSERT(!!viewer);
+  public:
+    Example(string envfile,string controller,bool showgui=true) :
+       TestBase(envfile,controller,showgui) {};
+    void run(dReal step, bool realtime=true);
+};
 
-    // attach it to the environment:
-    penv->AttachViewer(viewer);
+void Example::run(dReal step, bool realtime)
+{
+  stringstream os,is;
+  is << "setamplitude 40 40 40 40 ";
+  pcontroller->SendCommand(os,is);
 
-    // finally you call the viewer's infinite loop (this is why you need a separate thread):
-    bool showgui = true;
-    viewer->main(showgui);
+  is << "setinitialphase 0 120 240 360 ";
+  pcontroller->SendCommand(os,is);
 
+  is << "setoffset 0 0 0 0 ";
+  pcontroller->SendCommand(os,is);
+
+  is << "setperiod 1.5 ";
+  pcontroller->SendCommand(os,is);
+
+  is << "oscillation on ";
+  pcontroller->SendCommand(os,is);
+
+  penv->StartSimulation(step,realtime);
+
+  while(1);
 }
 
 int main(int argc, char ** argv)
 {
-   string envfile;
+  string envfile;
 
-   if (argc==1)
-     //-- Default file
-     envfile="./models/Cube4-I.env.xml";
-   else
-     envfile = argv[1];
+  if (argc==1)
+    //-- Default file
+    envfile="./models/Cube4-I.env.xml";
+  else
+    envfile = argv[1];
 
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
-    penv->StopSimulation();
-    penv->SetDebugLevel(Level_Debug);
+  Example example(envfile,"sinoscontroller");
+  usleep(100000);
+  example.SetCamera(0.427, 0.285, 0.47, 0.718, 0.59, 0.078, 0.263);
+  example.run(0.001);
 
-    boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    // load the scene
-    if( !penv->Load(envfile) ) {
-        penv->Destroy();
-        return 2;
-    }
-
-    //-- Set the transform for the camera view
-    RaveVector<float> rotation(0.426572, 0.285257, 0.469795, 0.718301);
-    RaveVector<float> translation(0.589395, 0.0782605, 0.262882);
-    RaveTransform<float> T(rotation,translation);
-    viewer->SetCamera(T);
-
-    //-- Get the robot
-    std::vector<RobotBasePtr> robots;
-    penv->GetRobots(robots);
-
-    //-- Robot 0
-    RobotBasePtr probot = robots[0];
-    cout << "Robot: " << probot->GetName() << endl;
-
-    //-- Load the controller
-    ControllerBasePtr pcontroller = penv->CreateController("sinoscontroller");
-    probot->SetController(pcontroller,"");
-
-    stringstream os,is;
-    is << "setamplitude 40 40 40 40 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setinitialphase 0 120 240 360 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setoffset 0 0 0 0 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "setperiod 1.5 ";
-    pcontroller->SendCommand(os,is);
-
-    is << "oscillation on ";
-    pcontroller->SendCommand(os,is);
-
-    const dReal STEP = 0.001;
-    penv->StartSimulation(STEP);
-    usleep(1000);
-  
-
-    while(1) {
-      sleep(1);
-    }
-
-
-    thviewer.join();
-    penv->Destroy();
-    return 0;
+  return 0;
 }
+
+
 
 
 
