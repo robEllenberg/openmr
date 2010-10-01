@@ -31,7 +31,7 @@ class SinosController : public ControllerBase
         _probot = robot;
 
         //-- Initilialization of the servocontroller
-        _pservocontroller = GetEnv()->CreateController("servocontroller");
+        _pservocontroller = RaveCreateController(GetEnv(),"servocontroller"); 
         _pservocontroller->Init(_probot,"");
 
         _ref_pos.resize(_probot->GetDOF());

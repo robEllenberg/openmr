@@ -35,7 +35,7 @@ class ServoController : public ControllerBase
         _probot = robot;
 
         //-- Initilialization of the odevelocity controller
-        _pvelocitycontroller = GetEnv()->CreateController("odevelocity");
+        _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity"); 
         _pvelocitycontroller->Init(_probot,"");
 
         //-- Get the robot joints. Are needed in every simulation step for reading the
