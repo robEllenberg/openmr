@@ -9,20 +9,25 @@ TestBase::TestBase(string envfile, string controller, bool showgui)
 
   this->showgui = showgui;
 
-  // create the main environment
-  penv = CreateEnvironment(true);
-  penv->StopSimulation();
-  penv->SetDebugLevel(Level_Debug);
+  RaveInitialize(true);
+  penv = RaveCreateEnvironment();  // create the main environment
+  RaveSetDebugLevel(Level_Debug);
 
-  // load the scene
-  if( !penv->Load(envfile) ) {
-      penv->Destroy();
-      return;
-  }
+  penv->StopSimulation();
 
   //-- Start the viewer
-  if (showgui)
+  if (showgui) {
     pthviewer = new boost::thread(boost::bind(&TestBase::SetViewer, this));
+    usleep(200000); // wait for the viewer to init
+  }
+  
+  // load the scene
+  if (!penv->Load(envfile)) {
+    penv->Destroy();
+    return;
+  }
+  usleep(100000); // wait for the viewer to init
+
 
   //-- Get the robot
   std::vector<RobotBasePtr> robots;
@@ -31,7 +36,7 @@ TestBase::TestBase(string envfile, string controller, bool showgui)
   cout << "Robot: " << probot->GetName() << endl;
 
   //-- Load the controller
-  pcontroller = penv->CreateController(controller);
+  pcontroller=RaveCreateController(penv,controller);
   probot->SetController(pcontroller,"");
 
 }
@@ -61,7 +66,7 @@ void TestBase::SetCamera(dReal q0, dReal q1, dReal q2, dReal q3, dReal tx, dReal
 
 void TestBase::SetViewer()
 {
-  viewer = penv->CreateViewer("qtcoin");
+  viewer = RaveCreateViewer(penv,"qtcoin");
   BOOST_ASSERT(!!viewer);
 
   cout << "Viewer!!!!" << endl;
