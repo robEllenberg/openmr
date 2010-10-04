@@ -165,6 +165,20 @@ class ServoController : public ControllerBase
             _ref_pos[servo]=pos*PI/180;
             return true;
         }
+        //-- Get the position of the servo
+        else if ( cmd == "getpos1") {
+          int servo;
+          std::vector<dReal> angle;
+          is >> servo;
+
+          //-- Get the current joint angle
+          _joints[servo]->GetValues(angle);
+          os << angle[0]*180/PI << " ";
+
+          //-- Just for debugging...
+          //cout << "Angle: " << angle[0]*180/PI << endl;
+        }
+
         else if ( cmd == "record_on" ) {
             string file;
             is >> file;
@@ -176,7 +190,7 @@ class ServoController : public ControllerBase
             _recording=true;
 
             cout << "RECORD on:" << file << "\n";
-
+ 
             return true;
         }
         else if ( cmd == "record_off" ) {

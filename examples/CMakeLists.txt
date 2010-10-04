@@ -31,6 +31,11 @@ set_target_properties(Test-servocontroller-3 PROPERTIES COMPILE_FLAGS "${OPENRAV
 set_target_properties(Test-servocontroller-3 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(Test-servocontroller-3 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
 
+add_executable(Test-servocontroller-4 Test-servocontroller-4.cpp TestBase.cpp)
+set_target_properties(Test-servocontroller-4 PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(Test-servocontroller-4 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(Test-servocontroller-4 ${OPENRAVE_LIBRARY} ${OPENRAVE_CORE_LIBRARY})
+
 #-- Examples for the sinoscontroller
 
 add_executable(Test-sinoscontroller-1 Test-sinoscontroller-1.cpp TestBase.cpp)
