@@ -35,10 +35,19 @@ TestBase::TestBase(string envfile, string controller, bool showgui)
   probot = robots[0];
   cout << "Robot: " << probot->GetName() << endl;
 
-  //-- Load the controller
-  pcontroller=RaveCreateController(penv,controller);
-  probot->SetController(pcontroller,"");
+  // create the controllers, make sure to lock environment!
+  {
+    EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
 
+    //-- Load the controller
+    pcontroller=RaveCreateController(penv,controller);
+    vector<int> dofindices(probot->GetDOF());
+    for(int i = 0; i < probot->GetDOF(); ++i) {
+      dofindices[i] = i;
+    }
+    probot->SetController(pcontroller,dofindices,1);
+  }
+  
 }
 
 //-- Destructor

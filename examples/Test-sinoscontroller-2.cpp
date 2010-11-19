@@ -1,71 +1,16 @@
-#include <openrave-core.h>
-#include <vector>
-#include <cstring>
-#include <sstream>
-#include <math.h>
+#include "TestBase.h"
 
-#include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
-
-using namespace OpenRAVE;
-using namespace std;
-
-
-ViewerBasePtr viewer;
-
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+class Example : public TestBase
 {
-    viewer = penv->CreateViewer(viewername);
-    BOOST_ASSERT(!!viewer);
+  public:
+    Example(string envfile,string controller,bool showgui=true) :
+       TestBase(envfile,controller,showgui) {};
+    void run(dReal step, bool realtime=true);
+};
 
-    // attach it to the environment:
-    penv->AttachViewer(viewer);
-
-    // finally you call the viewer's infinite loop (this is why you need a separate thread):
-    bool showgui = true;
-    viewer->main(showgui);
-
-}
-
-int main(int argc, char ** argv)
+void Example::run(dReal step, bool realtime)
 {
-   string envfile;
-
-   if (argc==1)
-     //-- Default file
-     envfile="./models/Unimod1.env.xml";
-   else
-     envfile = argv[1];
-
-    // create the main environment
-    EnvironmentBasePtr penv = CreateEnvironment(true);
-    penv->StopSimulation();
-    penv->SetDebugLevel(Level_Debug);
-
-    boost::thread thviewer(boost::bind(SetViewer,penv,"qtcoin"));
-    // load the scene
-    if( !penv->Load(envfile) ) {
-        penv->Destroy();
-        return 2;
-    }
-
-    //-- Set the transform for the camera view
-    RaveVector<float> rotation(0.36697, 0.167263, 0.434483, 0.805345);
-    RaveVector<float> translation(0.290932, 0.285499, 0.233995);
-    RaveTransform<float> T(rotation,translation);
-    viewer->SetCamera(T);
-
-    //-- Get the robot
-    std::vector<RobotBasePtr> robots;
-    penv->GetRobots(robots);
-
-    //-- Robot 0
-    RobotBasePtr probot = robots[0];
-    cout << "Robot: " << probot->GetName() << endl;
-
-    //-- Load the controller
-    ControllerBasePtr pcontroller = penv->CreateController("sinoscontroller");
-    probot->SetController(pcontroller,"");
+    penv->StartSimulation(step, realtime);
 
     stringstream os,is;
     is << "setamplitude 45 ";
@@ -95,14 +40,19 @@ int main(int argc, char ** argv)
     pcontroller->SendCommand(os,is);
 
     cout << "FIN\n";
-
-
-    thviewer.join();
-    penv->Destroy();
-    return 0;
+    
 }
 
+int main(void)
+{
 
+  Example example("models/Unimod1.env.xml","sinoscontroller");
+  usleep(100000);
+  example.SetCamera(0.36697, 0.167263, 0.434483, 0.805345,0.290932, 0.285499, 0.233995);
+  example.run(0.005);
+
+  return 0; 
+}
 
 
 
