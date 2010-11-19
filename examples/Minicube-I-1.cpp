@@ -11,7 +11,7 @@ class Example : public TestBase
 void Example::run(dReal step, bool realtime)
 {
   stringstream os,is;
-  is << "setamplitude 50 50 ";
+  is << "setamplitude 90 90 ";
   pcontroller->SendCommand(os,is);
 
   is << "setinitialphase 0 120 ";

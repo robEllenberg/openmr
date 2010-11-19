@@ -6,11 +6,28 @@ class Example : public TestBase
     Example(string envfile,string controller,bool showgui=true) :
        TestBase(envfile,controller,showgui) {};
     void run(dReal step, bool realtime=true);
+
+  private:
+    OpenRAVE::EnvironmentBase::GraphHandlePtr flecha;
 };
 
 void Example::run(dReal step, bool realtime)
 {
   stringstream os,is;
+
+  std::vector<RaveVector<float> > vpoints;
+    RaveVector<float> pt0;
+    RaveVector<float> color;
+    pt0[0] = 0.0;  pt0[1] = 0.0; pt0[2] = 0.0;
+    color[0] = 1.0;
+    color[1] = 0.0;
+    color[2] = 0.0;
+    color[3] = 1.0;
+    color.w = 1;
+
+    vpoints.push_back(pt0);
+    
+    flecha = penv->plot3 (vpoints[0], 1, 1, 10.0, color);
 
   is << "setamplitude 30 30 30 ";
   pcontroller->SendCommand(os,is);

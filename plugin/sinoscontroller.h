@@ -32,7 +32,7 @@ class SinosController : public ControllerBase
 
         //-- Initilialization of the servocontroller
         _pservocontroller = RaveCreateController(GetEnv(),"servocontroller"); 
-        _pservocontroller->Init(_probot,"");
+        //_pservocontroller->Init(_probot,"");
 
         _ref_pos.resize(_probot->GetDOF());
         _amplitude.resize(_probot->GetDOF());
@@ -44,6 +44,12 @@ class SinosController : public ControllerBase
         Reset(0);
         return true;
     }
+
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    {
+      return true;
+    }
+
 
     virtual void Reset(int options)
     {
@@ -65,11 +71,9 @@ class SinosController : public ControllerBase
         cout << "Reset!" << endl;
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values)
-    {
-        Reset(0);
-        return false;
-    }
+    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
+    virtual int IsControlTransformation() const { return _nControlTransformation; }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
@@ -77,13 +81,13 @@ class SinosController : public ControllerBase
         return false;
     }
 
-    virtual bool SimulationStep(dReal fTimeElapsed)
+    virtual void SimulationStep(dReal fTimeElapsed)
     {
         //-- Simulate the servos
         _pservocontroller->SimulationStep(fTimeElapsed);
 
         //-- If the oscillating mode is not set, return
-        if (!_oscillating) return true;
+        if (!_oscillating) return;
 
         _samplingperiod = round(_period/(_N*fTimeElapsed));
         _samplingtics ++;
@@ -96,8 +100,6 @@ class SinosController : public ControllerBase
           //-- Calculate the next positions
           SetRefPos();
         }
-
-        return true;
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -201,6 +203,8 @@ private:
 
 protected:
     RobotBasePtr _probot;
+    std::vector<int> _dofindices;
+    int _nControlTransformation;
     ControllerBasePtr _pservocontroller;
     int _samplingtics;
     int _samplingperiod;

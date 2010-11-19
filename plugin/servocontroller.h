@@ -30,13 +30,15 @@ class ServoController : public ControllerBase
     }
     virtual ~ServoController() {}
 
-    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
+        _dofindices = dofindices;
+        _nControlTransformation = nControlTransformation;
 
         //-- Initilialization of the odevelocity controller
         _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity"); 
-        _pvelocitycontroller->Init(_probot,"");
+        _pvelocitycontroller->Init(_probot,_dofindices, nControlTransformation);
 
         //-- Get the robot joints. Are needed in every simulation step for reading the
         //-- joint angles and maxvelocities
@@ -55,8 +57,15 @@ class ServoController : public ControllerBase
         cout << "Servocontroller: INIT" << endl;
 
         Reset(0);
+
+        
         return true;
     }
+
+    virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
+    virtual int IsControlTransformation() const { return _nControlTransformation; }
+
+
 
     virtual void Reset(int options)
     {
@@ -74,11 +83,7 @@ class ServoController : public ControllerBase
 
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values)
-    {
-        Reset(0);
-        return false;
-    }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
@@ -86,7 +91,7 @@ class ServoController : public ControllerBase
         return false;
     }
 
-    virtual bool SimulationStep(dReal fTimeElapsed)
+    virtual void SimulationStep(dReal fTimeElapsed)
     {
         std::vector<dReal> angle;
         std::vector<dReal> error(_probot->GetDOF());
@@ -123,8 +128,6 @@ class ServoController : public ControllerBase
 
         //-- Set the joints velocities
         _pvelocitycontroller->SendCommand(os,is);
-
-        return true;
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -295,6 +298,9 @@ private:
 
 protected:
     RobotBasePtr _probot;
+    std::vector<int> _dofindices;
+    int _nControlTransformation;
+
     ControllerBasePtr _pvelocitycontroller;
     std::vector<KinBody::JointPtr> _joints;
     std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
@@ -305,6 +311,9 @@ protected:
     bool _recording;                  //-- Recording mode
     std::vector<tvector> _phi_tvec;     //-- Servo's angles in time
     std::vector<tvector> _ref_tvec;     //-- Servo's reference positions in time
+
+   
+
 
 };
 
