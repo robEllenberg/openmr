@@ -26,13 +26,15 @@ class SinosController : public ControllerBase
     }
     virtual ~SinosController() {}
 
-    virtual bool Init(RobotBasePtr robot, const std::string& args)
+    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
+        _dofindices = dofindices;
+        _nControlTransformation = nControlTransformation;
 
         //-- Initilialization of the servocontroller
         _pservocontroller = RaveCreateController(GetEnv(),"servocontroller"); 
-        //_pservocontroller->Init(_probot,"");
+        _pservocontroller->Init(_probot,_dofindices, nControlTransformation);
 
         _ref_pos.resize(_probot->GetDOF());
         _amplitude.resize(_probot->GetDOF());
@@ -44,12 +46,6 @@ class SinosController : public ControllerBase
         Reset(0);
         return true;
     }
-
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
-    {
-      return true;
-    }
-
 
     virtual void Reset(int options)
     {
