@@ -101,6 +101,7 @@ class ServoController : public ControllerBase
 
         is << "setvelocity ";
         
+        //cout << "Servocontroller::Step. Ref: " << _ref_pos[0] << endl;
 
         //-- K controller for all the joints
         for (size_t i=0; i<_joints.size(); i++) {
@@ -111,7 +112,7 @@ class ServoController : public ControllerBase
             //-- Calculate the distance to the reference position (error)
             //-- and the desired velocity
             error[i] = angle[0] - _ref_pos[i];
-            velocity[i] = error[i]*_KP;
+            velocity[i] = -error[i]*_KP;
 
             //-- Limit the velocity to its maximum
             dReal Maxvel = _joints[i]->GetMaxVel();
@@ -126,11 +127,16 @@ class ServoController : public ControllerBase
               _phi_tvec[i].push_back(angle[0]);
               _ref_tvec[i].push_back(_ref_pos[i]);
             }
+
+	   // if (i==0) {
+           //   cout << "Servocontroller::Step. Servo " << i << " Angle: " << angle[0] << endl;
+           // }
         }
 
         //-- Set the joints velocities
         _pvelocitycontroller->SendCommand(os,is);
         //cout << "setvelocity " << velocity[0] << endl;
+        
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -190,6 +196,12 @@ class ServoController : public ControllerBase
         else if ( cmd == "record_on" ) {
             string file;
             is >> file;
+
+            //-- Reset the data vectors
+            for (size_t i=0; i<_joints.size(); i++) {
+              _phi_tvec[i].resize(0);
+              _ref_tvec[i].resize(0);
+            }
 
             //-- Open the file
             outFile.open(file.c_str());
