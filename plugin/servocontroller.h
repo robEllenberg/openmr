@@ -100,6 +100,7 @@ class ServoController : public ControllerBase
         stringstream os;
 
         is << "setvelocity ";
+        
 
         //-- K controller for all the joints
         for (size_t i=0; i<_joints.size(); i++) {
@@ -110,7 +111,7 @@ class ServoController : public ControllerBase
             //-- Calculate the distance to the reference position (error)
             //-- and the desired velocity
             error[i] = angle[0] - _ref_pos[i];
-            velocity[i] = -error[i]*_KP;
+            velocity[i] = error[i]*_KP;
 
             //-- Limit the velocity to its maximum
             dReal Maxvel = _joints[i]->GetMaxVel();
@@ -118,6 +119,7 @@ class ServoController : public ControllerBase
             if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
 
             is << velocity[i] << " ";
+            
 
             //-- Store the current sample (only in recording mode)
             if (_recording) {
@@ -128,6 +130,7 @@ class ServoController : public ControllerBase
 
         //-- Set the joints velocities
         _pvelocitycontroller->SendCommand(os,is);
+        //cout << "setvelocity " << velocity[0] << endl;
     }
 
     virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -140,6 +143,7 @@ class ServoController : public ControllerBase
         //-- Set the position of all the joints
         // The joint angles are received in degrees
         if( cmd == "setpos" ) {
+            
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
                 dReal pos;
                 is >> pos;
@@ -166,6 +170,7 @@ class ServoController : public ControllerBase
             //-- TODO: Check errors!!!!!
             //-- Store the reference positions in radians
             _ref_pos[servo]=pos*PI/180;
+           
             return true;
         }
         //-- Get the position of the servo
