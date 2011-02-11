@@ -51,7 +51,7 @@ int main(void)
 {
 
   Example example("models/Unimod1.env.xml","servocontroller");
-  example.run(0.005);
+  example.run(0.002);
 
   return 0;
 }

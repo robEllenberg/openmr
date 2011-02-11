@@ -28,7 +28,11 @@ void Example::run(dReal step, bool realtime)
 
   penv->StartSimulation(step, realtime);
 
-  while(1);
+  while(1) {
+    //for (int i=0; i<80; i++) 
+    //  penv->StepSimulation(step);
+    
+  }
 }
 
 int main(int argc, char ** argv)
