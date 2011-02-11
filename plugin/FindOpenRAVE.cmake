@@ -17,12 +17,6 @@ if(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
   set(OPENRAVE_FOUND 1)
 
   execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --prefix
-    OUTPUT_VARIABLE _openraveconfig_prefix
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" "" _openraveconfig_prefix "${_openraveconfig_prefix}")
-
-  execute_process(
     COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --cflags
     OUTPUT_VARIABLE _openraveconfig_cflags
     RESULT_VARIABLE _openraveconfig_failed)
@@ -59,7 +53,6 @@ if(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
   string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _openraveconfig_libs "${_openraveconfig_libs}")
   string(REGEX REPLACE "(^| )-l" "" _openraveconfig_libs "${_openraveconfig_libs}")
 
-  set( OPENRAVE_PREFIX "${_openraveconfig_prefix}" )
   set( OPENRAVE_CXXFLAGS "${_openraveconfig_cflags}" )
   set( OPENRAVE_LINK_FLAGS "${_openraveconfig_ldflags}" )
   set( OPENRAVE_INCLUDE_DIRS ${_openraveconfig_includedirs})
@@ -72,7 +65,7 @@ else(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
   # openrave include files in local directory
   if( MSVC )
     set(OPENRAVE_FOUND 1)
-    set( OPENRAVE_CXXFLAGS " -DRAVE_USEDLL -DRAVE_CORE_USEDLL -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB /EHc- ")
+    set( OPENRAVE_CXXFLAGS " -DOPENRAVE_DLL -DOPENRAVE_CORE_DLL -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB /EHc- ")
     set( OPENRAVE_LINK_FLAGS " ")
     set( OPENRAVE_INCLUDE_DIRS "c:/program files/openrave/include")
     set( OPENRAVE_LINK_DIRS "c:/program files/openrave/lib" )

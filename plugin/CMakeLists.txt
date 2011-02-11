@@ -17,5 +17,5 @@ add_library(openmr SHARED openmrmain.cpp  plugindefs.h servocontroller.h sinosco
 set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
                                                    LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 target_link_libraries(openmr ${OPENRAVE_LIBRARY} )
-install(TARGETS openmr DESTINATION ${OPENRAVE_PREFIX}/share/openrave/plugins)
+install(TARGETS openmr DESTINATION share/openrave/plugins)
 
