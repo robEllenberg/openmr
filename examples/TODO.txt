@@ -1,4 +1,6 @@
 
+-> Implement the neural controller
+
 -> Servocontroller:
   * Implement the getpos command!
 
