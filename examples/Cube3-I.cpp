@@ -20,11 +20,16 @@ void Example::run(dReal step, bool realtime)
   is << "setoffset 0 0 0 ";
   pcontroller->SendCommand(os,is);
 
-  is << "setperiod 1.5 ";
+  is << "setperiod 3 ";
   pcontroller->SendCommand(os,is);
 
   is << "oscillation on ";
   pcontroller->SendCommand(os,is);
+
+  char tecla;
+  cout << "Press a key to start the simulation" << endl;
+
+  cin >> tecla;
 
   penv->StartSimulation(step,realtime);
 

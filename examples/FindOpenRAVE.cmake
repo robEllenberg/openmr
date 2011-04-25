@@ -1,99 +1,46 @@
-# Try to find OpenRAVE
-# Once done this will define
+# - Find Open Robotics Automation Virtual Enviornment (OpenRAVE) Installation
+# http://www.openrave.org
 #
-# OPENRAVE_FOUND - if Coin3d is found
-# OPENRAVE_CXXFLAGS - extra flags
-# OPENRAVE_INCLUDE_DIRS - include directories
-# OPENRAVE_LINK_DIRS - link directories
-# OPENRAVE_LIBRARY_RELEASE - the relase version
-# OPENRAVE_LIBRARY_DEBUG - the debug version
-# OPENRAVE_LIBRARY - a default library, with priority debug.
+# OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms
+# in real-world robotics applications. The main focus is on simulation and analysis of kinematic and
+# geometric information related to motion planning. OpenRAVE’s stand-alone nature allows is to be easily
+# integrated into existing robotics systems. An important target application is industrial robotics automation.
 
-# use openrave-config
-find_program(OPENRAVE_CONFIG_EXECUTABLE NAMES openrave-config DOC "openrave-config executable")
-mark_as_advanced(OPENRAVE_CONFIG_EXECUTABLE)
+#==================================================================================
+# Copyright (C) 2009-2011 Rosen Diankov
+#
+# Distributed under the OSI-approved BSD License (the "License");
+# see accompanying file Copyright.txt for details.
+#
+# This software is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the License for more information.
+#=============================================================================
+# (To distributed this file outside of CMake, substitute the full
+#  License text for the above reference.)
+#==================================================================================
 
-if(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
-  set(OPENRAVE_FOUND 1)
+set(_OpenRAVE_PATHS)
+if(NOT OpenRAVE_DIR)
+  if( WIN32 )
+    # search in the registry
+    set(_OpenRAVE_CONFIG_NAME "openrave-config.exe")
+    get_filename_component(OpenRAVE_VERSION_STRING "[HKEY_LOCAL_MACHINE\\SOFTWARE\\OpenRAVE;]" NAME)
+    message(STATUS "OpenRAVE ${OpenRAVE_VERSION_STRING} found in registry")
+    if( OpenRAVE_VERSION_STRING )
+      get_filename_component(_OpenRAVE_PATH "[HKEY_LOCAL_MACHINE\\SOFTWARE\\OpenRAVE\\${OpenRAVE_VERSION_STRING};InstallRoot]" ABSOLUTE)
+      set(_OpenRAVE_PATHS ${_OpenRAVE_PATHS} ${_OpenRAVE_PATH})
+    endif( OpenRAVE_VERSION_STRING )
+  else(WIN32)
+    set(_OpenRAVE_CONFIG_NAME "openrave-config")
+  endif(WIN32)
+  # search for the config path
+  find_program(_OpenRAVE_CONFIG_EXECUTABLE NAMES ${_OpenRAVE_CONFIG_NAME} DOC "openrave executable")
+  if( _OpenRAVE_CONFIG_EXECUTABLE )
+    get_filename_component(_OpenRAVE_PATH "${_OpenRAVE_CONFIG_EXECUTABLE}" PATH) # bin
+    get_filename_component(_OpenRAVE_PATH "${_OpenRAVE_PATH}" PATH)
+    set(_OpenRAVE_PATHS ${_OpenRAVE_PATHS} ${_OpenRAVE_PATH})
+  endif( _OpenRAVE_CONFIG_EXECUTABLE )
+endif(NOT OpenRAVE_DIR)
 
-  execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --cflags
-    OUTPUT_VARIABLE _openraveconfig_cflags
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _openraveconfig_cflags "${_openraveconfig_cflags}")
-  execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --libs
-    OUTPUT_VARIABLE _openraveconfig_ldflags
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _openraveconfig_ldflags "${_openraveconfig_ldflags}")
-
-  execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --cflags-only-I
-    OUTPUT_VARIABLE _openraveconfig_includedirs
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _openraveconfig_includedirs "${_openraveconfig_includedirs}")
-  string(REGEX MATCHALL "(^| )-I([./+-_\\a-zA-Z]*)" _openraveconfig_includedirs "${_openraveconfig_includedirs}")
-  string(REGEX REPLACE "(^| )-I" "" _openraveconfig_includedirs "${_openraveconfig_includedirs}")
-  separate_arguments(_openraveconfig_includedirs)
-
-  execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --libs-only-L
-    OUTPUT_VARIABLE _openraveconfig_ldflags
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _openraveconfig_ldflags "${_openraveconfig_ldflags}")
-  string(REGEX MATCHALL "(^| )-L([./+-_\\a-zA-Z]*)" _openraveconfig_ldirs "${_openraveconfig_ldflags}")
-  string(REGEX REPLACE "(^| )-L" "" _openraveconfig_ldirs "${_openraveconfig_ldirs}")
-  separate_arguments(_openraveconfig_ldirs)
-
-  execute_process(
-    COMMAND ${OPENRAVE_CONFIG_EXECUTABLE} --libs-only-l
-    OUTPUT_VARIABLE _openraveconfig_libs
-    RESULT_VARIABLE _openraveconfig_failed)
-  string(REGEX REPLACE "[\r\n]" " " _openraveconfig_libs "${_openraveconfig_libs}")
-  string(REGEX MATCHALL "(^| )-l([./+-_\\a-zA-Z]*)" _openraveconfig_libs "${_openraveconfig_libs}")
-  string(REGEX REPLACE "(^| )-l" "" _openraveconfig_libs "${_openraveconfig_libs}")
-
-  set( OPENRAVE_CXXFLAGS "${_openraveconfig_cflags}" )
-  set( OPENRAVE_LINK_FLAGS "${_openraveconfig_ldflags}" )
-  set( OPENRAVE_INCLUDE_DIRS ${_openraveconfig_includedirs})
-  set( OPENRAVE_LINK_DIRS ${_openraveconfig_ldirs})
-  set( OPENRAVE_LIBRARY ${_openraveconfig_libs})
-  set( OPENRAVE_CORE_LIBRARY openrave-core)
-  set( OPENRAVE_LIBRARY_RELEASE ${OPENRAVE_LIBRARY})
-  set( OPENRAVE_LIBRARY_DEBUG ${OPENRAVE_LIBRARY})
-else(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
-  # openrave include files in local directory
-  if( MSVC )
-    set(OPENRAVE_FOUND 1)
-    set( OPENRAVE_CXXFLAGS " -DOPENRAVE_DLL -DOPENRAVE_CORE_DLL -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB /EHc- ")
-    set( OPENRAVE_LINK_FLAGS " ")
-    set( OPENRAVE_INCLUDE_DIRS "c:/program files/openrave/include")
-    set( OPENRAVE_LINK_DIRS "c:/program files/openrave/lib" )
-    set( OPENRAVE_LIBRARY openrave libxml2)
-    if( MSVC70 OR MSVC71 )
-      set(OPENRAVE_LIBRARY ${OPENRAVE_LIBRARY} boost_thread-vc71-mt-1_39.lib boost_date_time-vc71-mt-1_39.lib)
-    elseif( MSVC80 )
-      set(OPENRAVE_LIBRARY ${OPENRAVE_LIBRARY} boost_thread-vc80-mt-1_39.lib boost_date_time-vc80-mt-1_39.lib)
-    else()
-      set(OPENRAVE_LIBRARY ${OPENRAVE_LIBRARY} boost_thread-vc90-mt-1_39.lib boost_date_time-vc90-mt-1_39.lib)
-    endif()
-
-    set( OPENRAVE_CORE_LIBRARY ${OPENRAVE_LIBRARY} openrave-core)
-    set( OPENRAVE_LIBRARY_RELEASE ${OPENRAVE_LIBRARY})
-    set( OPENRAVE_LIBRARY_DEBUG ${OPENRAVE_LIBRARY})
-  else( MSVC )
-    set(OPENRAVE_FOUND 0)
-  endif( MSVC )
-endif(NOT MSVC AND OPENRAVE_CONFIG_EXECUTABLE)
-
-MARK_AS_ADVANCED(
-    OPENRAVE_FOUND
-    OPENRAVE_CXXFLAGS
-    OPENRAVE_LINK_FLAGS
-    OPENRAVE_INCLUDE_DIRS
-    OPENRAVE_LINK_DIRS
-    OPENRAVE_LIBRARY
-    OPENRAVE_CORE_LIBRARY
-    OPENRAVE_LIBRARY_RELEASE
-    OPENRAVE_LIBRARY_DEBUG
-)
+find_package(OpenRAVE NO_MODULE PATHS ${_OpenRAVE_PATHS})
