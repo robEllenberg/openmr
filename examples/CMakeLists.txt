@@ -5,6 +5,20 @@ project (openrave-modular-robots-examples)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 find_package(OpenRAVE REQUIRED)
 
+#------- Make sure the openmr plugin is installed!
+
+#-- Get the openrave share directory
+EXEC_PROGRAM("openrave-config --share-dir" OUTPUT_VARIABLE OpenRAVE_SHARE_DIR)
+
+find_library(OPENMR openmr ${OpenRAVE_SHARE_DIR}/plugins)
+message(STATUS "Looking for OpenMR... ${OPENMR}")
+
+if (NOT OPENMR)
+  message(SEND_ERROR "OPENMR not found")
+endif()
+
+
+#---- Now check the compiler
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
