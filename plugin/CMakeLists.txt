@@ -25,7 +25,7 @@ message(STATUS "Openrave Share directory: ${OpenRAVE_SHARE_DIR}")
 add_library(openmr SHARED openmrmain.cpp  plugindefs.h servocontroller.h sinoscontroller.h)
 set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
 set_target_properties(openmr PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
-target_link_libraries(openmr openrave)
+target_link_libraries(openmr ${OpenRAVE_LIBRARIES})
 install(TARGETS openmr DESTINATION ${OpenRAVE_SHARE_DIR}/plugins)
 
 
