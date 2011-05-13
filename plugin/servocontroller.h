@@ -27,6 +27,14 @@ class ServoController : public ControllerBase
     ServoController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
         __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov";
+        RegisterCommand("Test",boost::bind(&ServoController::Test,this,_1,_2),"Command for testing and debugging");
+        RegisterCommand("Setpos",boost::bind(&ServoController::SetPos,this,_1,_2),"Format: Setpos s1 [s2]. Set the reference position of all the robot joints, in degrees, in the range [-90,90]. If the robot have N joints, there have to be N arguments");
+        RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),"Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
+        RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),"Format: Getpos. Get the position of ALL the servos (in degrees)");
+        RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),"Format: Getpos servo. Returns the current servo position (in degrees, in the range [-90,90]. The argument servo is the servo number, starting from 0");
+        RegisterCommand("Record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),"Format: Record_on file. Start recording the servo position in the specified file. It will generate an octave file ");
+        RegisterCommand("Record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),"Format: Record_off. Stop recording. The octave file is generated ");
+
     }
     virtual ~ServoController() {}
 
@@ -139,96 +147,129 @@ class ServoController : public ControllerBase
         
     }
 
-    virtual bool SendCommand(std::ostream& os, std::istream& is)
+    //-- Just a command test for debugging...
+    bool Test(std::ostream& os, std::istream& is)
     {
-        string cmd;
-        is >> cmd;
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+      cout<<"Test..." << endl;
 
-        //-- Set position command.
-        //-- Set the position of all the joints
-        // The joint angles are received in degrees
-        if( cmd == "setpos" ) {
-            
-            for(size_t i = 0; i < _ref_pos.size(); ++i) {
-                dReal pos;
-                is >> pos;
+      return true;
+    }
 
-                //-- Store the reference positions in radians
-                _ref_pos[i]=pos*PI/180;
+    /*****************************************************************/
+    /* SetPos command. Set the reference position of ALL the joints  */
+    /* The joint angles are in degreees                              */
+    /*****************************************************************/
+    bool SetPos(std::ostream& os, std::istream& is)
+    {
+      for(size_t i = 0; i < _ref_pos.size(); ++i) {
+        dReal pos;
+        is >> pos;
 
-                if( !is )
-                    return false;
-            }
-            return true;
-        }
-        //-- Set the position of 1 joint
-        //-- The format is: servo angle (in degrees)
-        //-- Servo number starts from 0
-        else if ( cmd == "setpos1" ) {
+        if( !is )
+          return false;
 
-            int servo;
-            dReal pos;
-            is >> servo;
-            is >> pos;
+        //-- Store the reference positions in radians
+        _ref_pos[i]=pos*PI/180;
+      }
+      return true;
+    }
+
+    /*********************************************************/
+    //-- Set the position of 1 joint
+    //-- The format is: servo angle (in degrees)
+    //-- Servo number starts from 0
+    /*********************************************************/
+    bool SetPos1(std::ostream& os, std::istream& is)
+    {
+      int servo;
+      dReal pos;
+      is >> servo;
+      is >> pos;
 
 
-            //-- TODO: Check errors!!!!!
-            //-- Store the reference positions in radians
-            _ref_pos[servo]=pos*PI/180;
+      //-- TODO: Check errors!!!!!
+      //-- Store the reference positions in radians
+      _ref_pos[servo]=pos*PI/180;
            
-            return true;
-        }
-        //-- Get the position of the servo
-        else if ( cmd == "getpos1") {
-          int servo;
-          std::vector<dReal> angle;
-          is >> servo;
+      return true;
+    }
 
-          //-- Get the current joint angle
-          _joints[servo]->GetValues(angle);
-          os << angle[0]*180/PI << " ";
+    /*********************************************************/
+    //-- Get the position of ALL the servos (in degrees)
+    /*********************************************************/
+    bool GetPos(std::ostream& os, std::istream& is)
+    {
+      std::vector<dReal> angle;
+      for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
-          //-- Just for debugging...
-          //cout << "Angle: " << angle[0]*180/PI << endl;
-        }
+        //-- Get the current joint angle of the ith servo
+       _joints[i]->GetValues(angle);
+       os << angle[0]*180/PI << " ";
+      }
+      return true;
+    }
 
-        else if ( cmd == "record_on" ) {
-            string file;
-            is >> file;
+    /*********************************************************/
+    //-- Get the position of one servo
+    //-- The format is: servo angle (in degrees)
+    //-- Servo number starts from 0
+    /*********************************************************/
+    bool GetPos1(std::ostream& os, std::istream& is)
+    {
+      int servo;
+      std::vector<dReal> angle;
+      is >> servo;
 
-            //-- Reset the data vectors
-            for (size_t i=0; i<_joints.size(); i++) {
-              _phi_tvec[i].resize(0);
-              _ref_tvec[i].resize(0);
-            }
+       //-- Get the current joint angle
+       _joints[servo]->GetValues(angle);
+       os << angle[0]*180/PI << " ";
 
-            //-- Open the file
-            outFile.open(file.c_str());
+       //-- Just for debugging...
+       //cout << "Angle: " << angle[0]*180/PI << endl;
+      return true;
+    }
 
-            //-- Seting the recording mode
-            _recording=true;
+    /**************************************************************/
+    /* Start recording the servo position in the specified file.  */
+    /* It will generate an octave file                            */
+    /**************************************************************/
+    bool RecordOn(std::ostream& os, std::istream& is)
+    {
+      string file;
+      is >> file;
 
-            cout << "RECORD on:" << file << "\n";
+       //-- Reset the data vectors
+       for (size_t i=0; i<_joints.size(); i++) {
+          _phi_tvec[i].resize(0);
+          _ref_tvec[i].resize(0);
+       }
+
+       //-- Open the file
+       outFile.open(file.c_str());
+
+       //-- Seting the recording mode
+        _recording=true;
+
+        cout << "RECORD on:" << file << "\n";
  
-            return true;
-        }
-        else if ( cmd == "record_off" ) {
+      return true;
+    }
 
-            //-- Write the information in the output file
-            generate_octave_file();
+    /*******************************************************/
+    /* Stop recording. The octave file will be generated   */
+    /*******************************************************/
+    bool RecordOff(std::ostream& os, std::istream& is)
+    {
+      //-- Write the information in the output file
+      generate_octave_file();
 
-            //-- Close the file
-            outFile.close();
+      //-- Close the file
+      outFile.close();
 
-            _recording=false;
-
-            cout << "RECORD off\n";
-            cout << "Max vel: " << _joints[0]->GetMaxVel() << endl;
-            return true;
-        }
-
-        return true;
+      _recording=false;
+      cout << "RECORD off\n";
+      cout << "Max vel: " << _joints[0]->GetMaxVel() << endl;
+      return true;
     }
 
     virtual bool IsDone()
@@ -240,6 +281,8 @@ class ServoController : public ControllerBase
         return 0;
     }
     virtual RobotBasePtr GetRobot() const { return _probot; }
+
+
 
 private:
 

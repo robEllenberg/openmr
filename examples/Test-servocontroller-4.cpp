@@ -35,7 +35,8 @@ void Example::run(dReal step, bool realtime)
   
   //-- Get the servo position every 20ms (during 1 second)
   for (int i=0; i<50; i++) {
-    is << "getpos1 0 ";
+    //is << "getpos1 0 ";
+    is << "getpos ";
     pcontroller->SendCommand(os,is);
     os >> angle;
     cout << "Servo: " << angle << endl;
