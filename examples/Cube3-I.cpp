@@ -1,4 +1,5 @@
 #include "TestBase.h"
+#include <iostream>
 
 class Example : public TestBase
 {

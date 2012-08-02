@@ -53,11 +53,11 @@ def run():
     #-- Translation
     T=trans(T,0.412915, 0.156822, 0.285362)
 
-    env.SetCamera(T)
+    #env.SetCamera(T)
 
     with env:
         robot = env.GetRobots()[0]
-        robot.SetController(env.CreateController('sinoscontroller'))
+        robot.SetController(RaveCreateController(env,'sinoscontroller'))
         env.StopSimulation()
         env.StartSimulation(timestep=0.001)
 
