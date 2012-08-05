@@ -17,16 +17,15 @@ endif()
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 
-#-- Get the openrave share directory
-EXEC_PROGRAM("openrave-config --share-dir" OUTPUT_VARIABLE OpenRAVE_SHARE_DIR)
-
-message(STATUS "Openrave Share directory: ${OpenRAVE_SHARE_DIR}")
-
 add_library(openmr SHARED openmrmain.cpp  plugindefs.h servocontroller.h sinoscontroller.h)
 set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
 set_target_properties(openmr PROPERTIES LINK_FLAGS "${OpenRAVE_LINK_FLAGS}")
 target_link_libraries(openmr ${OpenRAVE_LIBRARIES})
-install(TARGETS openmr DESTINATION ${OpenRAVE_SHARE_DIR}/plugins)
 
+if( NOT DEFINED ENV{PLUGIN_INSTALL_DIR} )
+    set(PLUGIN_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../plugins")
+else( NOT DEFINED ENV{PLUGIN_INSTALL_DIR} )
+    set(PLUGIN_INSTALL_DIR "$ENV{PLUGIN_INSTALL_DIR}")
+endif( NOT DEFINED ENV{PLUGIN_INSTALL_DIR} )
 
-
+install(TARGETS openmr DESTINATION ${PLUGIN_INSTALL_DIR})
