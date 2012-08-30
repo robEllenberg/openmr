@@ -384,78 +384,43 @@ private:
         //Export all servo data by default
         generate_octave_file(0,_phi_tvec.size());
     }
+    
 
-  void generate_octave_file(size_t startDOF, size_t stopDOF)
-  {
-      
-      size_t size = _phi_tvec[0].size();
-      //Account for the fact that stopDOF is an index and not a quantity:
-      stopDOF++;
-    cout << "Size: " << size << endl;
+    /**
+     * Export servo data to a csv file by row.
+     * The first column contains the name of the data field, and subsequent columns the data. 
+     * Currently, there are no time-indexes available, but it will be exported in a future release.
+     */
+    void generate_octave_file(size_t startDOF, size_t stopDOF)
+    {
 
+        size_t size = _phi_tvec[0].size();
+        RAVELOG_INFO("Timesteps: %d\n",size);
+        //Account for the fact that stopDOF is an index and not a quantity:
+        stopDOF++;
+        // Servo properties (gains)
 
-    //-- Servos angle
-    for (size_t s=startDOF; s<stopDOF; s++) {
-      outFile << "phi" << s <<"=[";
-      for (size_t t=0; t<size; t++) {
-        outFile << _phi_tvec[s][t]*180/PI << ",";
-      }
-      outFile << "];" << endl;
+        outFile << "Kp " << _KP << " Ki " << _KI << " Kd " << _KD << " Kf " << _Kf << endl ;
+
+        //-- Servos angle
+        for (size_t s=startDOF; s<stopDOF; s++) {
+            outFile << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
+            for (size_t t=0; t<size; t++) {
+                outFile << _phi_tvec[s][t]*180/PI << " ";
+            }
+            outFile << endl;
+        }
+
+        //-- Reference positions
+        for (size_t s=startDOF; s<stopDOF; s++) {
+            outFile << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
+            for (size_t t=0; t<size; t++) {
+                outFile << _ref_tvec[s][t]*180/PI << " ";
+            }
+            outFile << endl;
+        }
+
     }
-
-    //-- Reference positions
-    for (size_t s=startDOF; s<stopDOF; s++) {
-      outFile << "ref" << s <<"=[";
-      for (size_t t=0; t<size; t++) {
-        outFile << _ref_tvec[s][t]*180/PI << ",";
-      }
-      outFile << "];" << endl;
-    }
-
-    //-- Time
-    outFile << "t=[0:1:" << size-1 << "];" << endl;
-
-    //-- Plot the servo angles
-    outFile << "plot(";
-    for (size_t s=startDOF; s<stopDOF; s++) {
-      outFile << "t,phi" << s << ",'-'";
-
-      //-- Add a ',' except for the last element
-      if (s<stopDOF-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-    //-- Plot the reference positions
-    outFile << "hold on;";
-    outFile << "plot(";
-    for (size_t s=startDOF; s<stopDOF; s++) {
-      outFile << "t,ref" << s << ",'-'";
-
-      //-- Add a ',' except for the last element
-      if (s<stopDOF-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-    //-- Add the legends
-    outFile << "legend(";
-    for (size_t s=startDOF; s<stopDOF; s++) {
-      outFile << "'Servo " << s << "'";
-
-      //-- Add a ',' except for the last element
-      if (s<stopDOF-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-
-    outFile << "grid on;" << endl;
-    outFile << "title('Servos angle')" << endl;
-    outFile << "xlabel('Simulation time')" << endl;
-    outFile << "ylabel('Angle (degrees)')" << endl;
-    outFile << "axis([0," << size-1 << ",-90, 90])" << endl;
-  }
 
 protected:
     RobotBasePtr _probot;
