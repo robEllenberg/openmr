@@ -35,7 +35,7 @@ class ServoController : public ControllerBase
         RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
                 "Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
         RegisterCommand("Setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
-                "Format: Setgains kp [kd]. Set the feedback control gains for the PD loop.");
+                "Format: Setgains kp kd ki kf. Set the feedback control gains for the PID loop.");
         RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
                 "Format: Getpos. Get the position of ALL the servos (in degrees)");
         RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
@@ -88,16 +88,20 @@ class ServoController : public ControllerBase
         //-- in order for the servos to stay in the initial position
         _ref_pos.resize(_probot->GetDOF());
         _error.resize(_probot->GetDOF());
+        _errSum.resize(_probot->GetDOF());
         std::vector<dReal> angle;
         for (size_t i=0; i<_joints.size(); i++) {
             _joints[i]->GetValues(angle);
             _ref_pos[i]=angle[0];
             _error[i]=0.0;
+            _errSum[i]=0.0;
         }
 
         //-- Default value of the Proportional controller KP constant
         _KP=8.3;
         _KD=0;
+        _KI=0;
+        _Kf=.95;
 
     }
 
@@ -120,6 +124,7 @@ class ServoController : public ControllerBase
         stringstream os;
 
         dReal error,derror;
+        //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
         //Copy code from odecontroller.h to get all DOF velocities. For now,
         //gamble that velocities are "constant" enough that an environment lock
@@ -146,9 +151,13 @@ class ServoController : public ControllerBase
             assert(fTimeElapsed > 0.0);
 
             // find dError / dt
+            // Attempt to smooth out noise in time elapsed?
             derror = (error - _error[i])/fTimeElapsed;
 
-            velocity[i] = -error*_KP - derror*_KD;
+            // Calculate decaying integration
+            _errSum[i] = error*fTimeElapsed + _errSum[i]*(1-(1-_Kf)*fTimeElapsed);
+
+            velocity[i] = -error*_KP - derror*_KD - _errSum[i]*_KI; 
 
             //-- Limit the velocity to its maximum
             dReal Maxvel = _joints[i]->GetMaxVel();
@@ -156,7 +165,6 @@ class ServoController : public ControllerBase
             if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
 
             is << velocity[i] << " ";
-            
 
             //-- Store the current sample (only in recording mode)
             if (_recording) {
@@ -230,20 +238,28 @@ class ServoController : public ControllerBase
     {
       dReal kp;
       dReal kd;
+      dReal ki;
+      dReal kf;
+
       is >> kp;
+      is >> ki;
       is >> kd;
+      is >> kf;
 
       if (kp >= 0.0) {
           _KP = kp;
           RAVELOG_VERBOSE("Kp Gain is now: %f\n",_KP);
       }
-      else RAVELOG_ERROR("Kp Gain %f is out of range, ignoring...\n",_KP);
+      else RAVELOG_ERROR("Kp Gain %f is out of range, ignoring...\n",kp);
 
-      if (kd >= 0.0) {
-          _KD = kd;
-          RAVELOG_VERBOSE("Kp Gain is now: %f\n",_KD);
-      }
-      else RAVELOG_ERROR("Kp Gain %f is out of range, ignoring...\n",_KD);
+      _KD = kd;
+      RAVELOG_VERBOSE("Kd Gain is now: %f\n",_KD);
+
+      _KI = ki;
+      RAVELOG_VERBOSE("Ki Gain is now: %f\n",_KI);
+
+      _Kf = kf;
+      RAVELOG_VERBOSE("Kf Gain is now: %f\n",_Kf);
 
       //This function doesn't "fail" exactly, so return true for now... 
       return true;
@@ -420,8 +436,11 @@ protected:
     std::vector<KinBody::JointPtr> _joints;
     std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
     std::vector<dReal> _error;  //-- Reference positions (in radians)
+    std::vector<dReal> _errSum;  //-- Reference positions (in radians)
     dReal _KP;                    //-- P controller KP constant
-    dReal _KD;                    //-- controller KD constant
+    dReal _KI;
+    dReal _KD;
+    dReal _Kf;                    // -- "Forgetting" constant of integrator
 
     //-- For recording....
     ofstream outFile;                 //-- Stream file for storing the servo positions
