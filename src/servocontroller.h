@@ -18,7 +18,6 @@
 #include <math.h>
 #include <fstream>
 
-#define ALPHA 0.9
 //-- Time vector
 typedef std::vector<dReal> tvector;
 
@@ -105,7 +104,8 @@ class ServoController : public ControllerBase
         _KP=8.3;
         _KD=0;
         _KI=0;
-        _Kf=.95;
+        _Kf=.1;
+        _Ka=.01;
 
     }
 
@@ -157,7 +157,7 @@ class ServoController : public ControllerBase
             assert(fTimeElapsed > 0.0);
 
             // find dError / dt and low-pass filter the data with hard-coded alpha
-            derror = (error - _error[i])/fTimeElapsed*ALPHA+_dError[i]*(1-ALPHA);
+            derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
 
             // Calculate decaying integration
             _errSum[i] = error*fTimeElapsed + _errSum[i]*kr;
@@ -179,6 +179,7 @@ class ServoController : public ControllerBase
 
             // Update error history with new scratch value
             _error[i] = error;
+            _dError[i] = derror;
 
         }
 
@@ -245,11 +246,13 @@ class ServoController : public ControllerBase
       dReal kd;
       dReal ki;
       dReal kf;
+      dReal ka;
 
       is >> kp;
       is >> ki;
       is >> kd;
       is >> kf;
+      is >> ka;
 
       if (kp >= 0.0) {
           _KP = kp;
@@ -266,7 +269,13 @@ class ServoController : public ControllerBase
       if (kf>=0 && kf<=1)
       {
           _Kf = kf;
-          RAVELOG_VERBOSE("Kf constant is now: %f\n",_Kf);
+          RAVELOG_VERBOSE("Kf decay rate is now: %f\n",_Kf);
+      }
+
+      if (ka>=0 && ka<=1)
+      {
+          _Ka = ka;
+          RAVELOG_VERBOSE("Ka filter constant is now: %f\n",_Ka);
       }
 
       //This function doesn't "fail" exactly, so return true for now... 
@@ -387,7 +396,7 @@ private:
     
 
     /**
-     * Export servo data to a csv file by row.
+     * Export servo data to a txt file by row.
      * The first column contains the name of the data field, and subsequent columns the data. 
      * Currently, there are no time-indexes available, but it will be exported in a future release.
      */
@@ -400,7 +409,7 @@ private:
         stopDOF++;
         // Servo properties (gains)
 
-        outFile << "Kp " << _KP << " Ki " << _KI << " Kd " << _KD << " Kf " << _Kf << endl ;
+        outFile << "Kp " << _KP << " Ki " << _KI << " Kd " << _KD << " Kf " << _Kf << " Ka " << _Ka << endl ;
 
         //-- Servos angle
         for (size_t s=startDOF; s<stopDOF; s++) {
@@ -437,6 +446,7 @@ protected:
     dReal _KI;
     dReal _KD;
     dReal _Kf;                    // -- "Forgetting" constant of integrator
+    dReal _Ka;                    // -- first order filter for derivative
 
     //-- For recording....
     ofstream outFile;                 //-- Stream file for storing the servo positions
