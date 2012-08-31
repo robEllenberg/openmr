@@ -35,11 +35,11 @@ class ServoController : public ControllerBase
         RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
                 "Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
         RegisterCommand("Setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
-                "Format: Setgains kp kd ki kf. Set the feedback control gains for the PID loop.");
+                "Format: Setgains kp [kd] [ki] [kf] [ka]. Set gains for the PID controller. kp, ki, and kd are independent gains (may change in a future release. kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and ka is the first order filter coeficient for the error rate (1 = no filtering, ka -> 0 gives less filtering).");
         RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
                 "Format: Getpos. Get the position of ALL the servos (in degrees)");
         RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
-                "Format: Getpos servo. Returns the current servo position (in degrees, in the range [-90,90]. The argument servo is the servo number, starting from 0");
+                "Format: Getpos servo. Returns the current servo position (in degrees). The argument servo is the servo number, starting from 0");
         RegisterCommand("Record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),
                 "Format: Record_on . Start recording the servo positions and references to memory");
         RegisterCommand("Record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
@@ -291,7 +291,7 @@ class ServoController : public ControllerBase
       std::vector<dReal> angle;
       for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
-        //-- Get the current joint angle of the ith servo
+        //-- Get the current joint angle of the i'th servo
        _joints[i]->GetValues(angle);
        os << angle[0]*180/PI << " ";
       }
