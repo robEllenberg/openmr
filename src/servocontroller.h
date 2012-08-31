@@ -100,7 +100,8 @@ class ServoController : public ControllerBase
             _dError[i]=0.0;
         }
 
-        //-- Default value of the Proportional controller KP constant
+        //-- Default value of the Proportional controller KP constant from old OpenMR
+        // This should be backwards compatible with old code
         _KP=8.3;
         _KD=0;
         _KI=0;
@@ -331,6 +332,11 @@ class ServoController : public ControllerBase
         }
         //Remove file definition here
 
+        string file;
+        if (is >> file){
+            outFile.open(file.c_str());
+        }
+
         _recording=true;
 
         return true;
@@ -342,26 +348,18 @@ class ServoController : public ControllerBase
     bool RecordOff(std::ostream& os, std::istream& is)
     {
         //-- Write the information in the output file
+        //-- Open the file if the record_on command has not opened it already
         string file;
-        is >> file;
+        if (!outFile.is_open() && is >> file) outFile.open(file.c_str());
 
         size_t startDOF = 0;
-        size_t stopDOF = _phi_tvec.size();
+        size_t stopDOF = _phi_tvec.size()-1;
 
-        if (!is.eof()){
-            //Read in specific DOF range from command
-            //TODO: generalize with an input vector?
-            is >> startDOF;
-            RAVELOG_VERBOSE("startDOF: %d \n",startDOF);
-        }
-        if (!is.eof()){
-            is >> stopDOF;
-        }
-        else stopDOF=startDOF;
-            RAVELOG_VERBOSE("stopDOF: %d \n",stopDOF);
+        // If only 1 parameter is passed in, make both start and stop equal
+        is >> startDOF >> stopDOF;
 
-        //-- Open the file
-        outFile.open(file.c_str());
+        RAVELOG_VERBOSE("stopDOF: %d \n",stopDOF);
+        RAVELOG_VERBOSE("startDOF: %d \n",startDOF);
 
         RAVELOG_INFO("Writing servo data %d to %d in octave file: %s \n",startDOF,stopDOF,file.c_str());
 
