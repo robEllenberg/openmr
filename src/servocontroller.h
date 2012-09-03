@@ -26,14 +26,24 @@ class ServoController : public ControllerBase
  public:
     ServoController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
+        //TODO: Add a way to set gains per joint to match physical behavior
         __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov";
-        RegisterCommand("Test",boost::bind(&ServoController::Test,this,_1,_2),"Command for testing and debugging");
-        RegisterCommand("Setpos",boost::bind(&ServoController::SetPos,this,_1,_2),"Format: Setpos s1 [s2]. Set the reference position of all the robot joints, in degrees, in the range [-90,90]. If the robot have N joints, there have to be N arguments");
-        RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),"Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
-        RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),"Format: Getpos. Get the position of ALL the servos (in degrees)");
-        RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),"Format: Getpos servo. Returns the current servo position (in degrees, in the range [-90,90]. The argument servo is the servo number, starting from 0");
-        RegisterCommand("Record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),"Format: Record_on file. Start recording the servo position in the specified file. It will generate an octave file ");
-        RegisterCommand("Record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),"Format: Record_off. Stop recording. The octave file is generated ");
+        RegisterCommand("Test",boost::bind(&ServoController::Test,this,_1,_2),
+                "Command for testing and debugging");
+        RegisterCommand("Setpos",boost::bind(&ServoController::SetPos,this,_1,_2),
+                "Format: Setpos s1 [s2]. Set the reference position of all the robot joints, in degrees, in the range [-90,90]. If the robot have N joints, there have to be N arguments");
+        RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
+                "Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
+        RegisterCommand("Setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
+                "Format: Setgains kp [kd] [ki] [kf] [ka]. Set gains for the PID controller. kp, ki, and kd are independent gains (may change in a future release. kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and ka is the first order filter coeficient for the error rate (1 = no filtering, ka -> 0 gives less filtering).");
+        RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
+                "Format: Getpos. Get the position of ALL the servos (in degrees)");
+        RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
+                "Format: Getpos servo. Returns the current servo position (in degrees). The argument servo is the servo number, starting from 0");
+        RegisterCommand("Record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),
+                "Format: Record_on . Start recording the servo positions and references to memory");
+        RegisterCommand("Record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
+                "Format: Record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
 
     }
     virtual ~ServoController() {}
@@ -44,7 +54,7 @@ class ServoController : public ControllerBase
         _dofindices = dofindices;
         _nControlTransformation = nControlTransformation;
 
-        //-- Initilialization of the odevelocity controller
+        //-- Initialization of the odevelocity controller
         _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity"); 
         _pvelocitycontroller->Init(_probot,_dofindices, nControlTransformation);
 
@@ -61,33 +71,42 @@ class ServoController : public ControllerBase
         _phi_tvec.resize(_joints.size());
         _ref_tvec.resize(_joints.size());
 
-
-        cout << "Servocontroller: INIT" << endl;
+        //Updated to standard RAVE logging function
+        RAVELOG_DEBUG("servocontroller initialized\n");
 
         Reset(0);
 
-        
         return true;
     }
 
     virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
     virtual int IsControlTransformation() const { return _nControlTransformation; }
 
-
-
     virtual void Reset(int options)
     {
         //-- Initially, the reference positions should be set to the joints position
         //-- in order for the servos to stay in the initial position
         _ref_pos.resize(_probot->GetDOF());
+        _error.resize(_probot->GetDOF());
+        _errSum.resize(_probot->GetDOF());
+        _dError.resize(_probot->GetDOF());
         std::vector<dReal> angle;
         for (size_t i=0; i<_joints.size(); i++) {
+            //TODO: Use iterators?
             _joints[i]->GetValues(angle);
             _ref_pos[i]=angle[0];
+            _error[i]=0.0;
+            _errSum[i]=0.0;
+            _dError[i]=0.0;
         }
 
-        //-- Default value of the Proportional controller KP constant
+        //-- Default value of the Proportional controller KP constant from old OpenMR
+        // This should be backwards compatible with old code
         _KP=8.3;
+        _KD=0;
+        _KI=0;
+        _Kf=.1;
+        _Ka=.01;
 
     }
 
@@ -102,25 +121,49 @@ class ServoController : public ControllerBase
     virtual void SimulationStep(dReal fTimeElapsed)
     {
         std::vector<dReal> angle;
-        std::vector<dReal> error(_probot->GetDOF());
-        std::vector<dReal> velocity(_probot->GetDOF());
+        int dof=_probot->GetDOF();
+        //std::vector<dReal> error(dof);
+        std::vector<dReal> lasterror(dof);
+        std::vector<dReal> velocity(dof);
         stringstream is;
         stringstream os;
 
+        dReal error,derror;
+        //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
+
+        //Copy code from odecontroller.h to get all DOF velocities. For now,
+        //gamble that velocities are "constant" enough that an environment lock
+        //isn't necessary.
+        //int dofindex = 0;
+        //std::vector<OpenRAVE::dReal> valldofvelocities;
+        //_probot->GetDOFVelocities(valldofvelocities);
+
         is << "setvelocity ";
-        
-        //cout << "Servocontroller::Step. Ref: " << _ref_pos[0] << endl;
 
         //-- K controller for all the joints
         for (size_t i=0; i<_joints.size(); i++) {
-
+            
+            //Kr is the opposit of Kf, which controls %remaining over time. kr=.9 -> e=.9 after 1 second
+            // Assume fTimeElapsed << 1 sec.
+            dReal kr = (1-_Kf*fTimeElapsed);
+            //TODO: (low) Fix this to handle joint DOF varieties properly...mix of standards here?
             //-- Get the current joint angle
             _joints[i]->GetValues(angle);
 
             //-- Calculate the distance to the reference position (error)
             //-- and the desired velocity
-            error[i] = angle[0] - _ref_pos[i];
-            velocity[i] = -error[i]*_KP;
+            error = angle[0] - _ref_pos[i];
+
+            //TODO: Why would this happen? should this be a more graceful failure?
+            assert(fTimeElapsed > 0.0);
+
+            // find dError / dt and low-pass filter the data with hard-coded alpha
+            derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
+
+            // Calculate decaying integration
+            _errSum[i] = error*fTimeElapsed + _errSum[i]*kr;
+
+            velocity[i] = -error*_KP - derror*_KD - _errSum[i]*_KI; 
 
             //-- Limit the velocity to its maximum
             dReal Maxvel = _joints[i]->GetMaxVel();
@@ -128,7 +171,6 @@ class ServoController : public ControllerBase
             if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
 
             is << velocity[i] << " ";
-            
 
             //-- Store the current sample (only in recording mode)
             if (_recording) {
@@ -136,14 +178,14 @@ class ServoController : public ControllerBase
               _ref_tvec[i].push_back(_ref_pos[i]);
             }
 
-	   // if (i==0) {
-           //   cout << "Servocontroller::Step. Servo " << i << " Angle: " << angle[0] << endl;
-           // }
+            // Update error history with new scratch value
+            _error[i] = error;
+            _dError[i] = derror;
+
         }
 
         //-- Set the joints velocities
         _pvelocitycontroller->SendCommand(os,is);
-        //cout << "setvelocity " << velocity[0] << endl;
         
     }
 
@@ -194,6 +236,53 @@ class ServoController : public ControllerBase
       return true;
     }
 
+    
+    /**
+     * Set controller gains.
+     * Kludgy input string of PD gains (set D to 0 and KP to 8.3 for default behavior)
+     */
+    bool SetGains(std::ostream& os, std::istream& is)
+    {
+      dReal kp;
+      dReal kd;
+      dReal ki;
+      dReal kf;
+      dReal ka;
+
+      is >> kp;
+      is >> ki;
+      is >> kd;
+      is >> kf;
+      is >> ka;
+
+      if (kp >= 0.0) {
+          _KP = kp;
+          RAVELOG_VERBOSE("Kp Gain is now: %f\n",_KP);
+      }
+      else RAVELOG_ERROR("Kp Gain %f is out of range, ignoring...\n",kp);
+
+      _KD = kd;
+      RAVELOG_VERBOSE("Kd Gain is now: %f\n",_KD);
+
+      _KI = ki;
+      RAVELOG_VERBOSE("Ki Gain is now: %f\n",_KI);
+      
+      if (kf>=0 && kf<=1)
+      {
+          _Kf = kf;
+          RAVELOG_VERBOSE("Kf decay rate is now: %f\n",_Kf);
+      }
+
+      if (ka>=0 && ka<=1)
+      {
+          _Ka = ka;
+          RAVELOG_VERBOSE("Ka filter constant is now: %f\n",_Ka);
+      }
+
+      //This function doesn't "fail" exactly, so return true for now... 
+      return true;
+    }
+
     /*********************************************************/
     //-- Get the position of ALL the servos (in degrees)
     /*********************************************************/
@@ -202,7 +291,7 @@ class ServoController : public ControllerBase
       std::vector<dReal> angle;
       for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
-        //-- Get the current joint angle of the ith servo
+        //-- Get the current joint angle of the i'th servo
        _joints[i]->GetValues(angle);
        os << angle[0]*180/PI << " ";
       }
@@ -235,24 +324,22 @@ class ServoController : public ControllerBase
     /**************************************************************/
     bool RecordOn(std::ostream& os, std::istream& is)
     {
-      string file;
-      is >> file;
 
-       //-- Reset the data vectors
-       for (size_t i=0; i<_joints.size(); i++) {
-          _phi_tvec[i].resize(0);
-          _ref_tvec[i].resize(0);
-       }
+        //-- Reset the data vectors
+        for (size_t i=0; i<_joints.size(); i++) {
+            _phi_tvec[i].resize(0);
+            _ref_tvec[i].resize(0);
+        }
+        //Remove file definition here
 
-       //-- Open the file
-       outFile.open(file.c_str());
+        string file;
+        if (is >> file){
+            outFile.open(file.c_str());
+        }
 
-       //-- Seting the recording mode
         _recording=true;
 
-        cout << "RECORD on:" << file << "\n";
- 
-      return true;
+        return true;
     }
 
     /*******************************************************/
@@ -260,16 +347,29 @@ class ServoController : public ControllerBase
     /*******************************************************/
     bool RecordOff(std::ostream& os, std::istream& is)
     {
-      //-- Write the information in the output file
-      generate_octave_file();
+        //-- Write the information in the output file
+        //-- Open the file if the record_on command has not opened it already
+        string file;
+        if (!outFile.is_open() && is >> file) outFile.open(file.c_str());
 
-      //-- Close the file
-      outFile.close();
+        size_t startDOF = 0;
+        size_t stopDOF = _phi_tvec.size()-1;
 
-      _recording=false;
-      cout << "RECORD off\n";
-      cout << "Max vel: " << _joints[0]->GetMaxVel() << endl;
-      return true;
+        // If only 1 parameter is passed in, make both start and stop equal
+        is >> startDOF >> stopDOF;
+
+        RAVELOG_VERBOSE("stopDOF: %d \n",stopDOF);
+        RAVELOG_VERBOSE("startDOF: %d \n",startDOF);
+
+        RAVELOG_INFO("Writing servo data %d to %d in octave file: %s \n",startDOF,stopDOF,file.c_str());
+
+        generate_octave_file(startDOF,stopDOF);
+
+        //-- Close the file
+        outFile.close();
+
+        RAVELOG_INFO("RECORD off, max velocity: %f \n",_joints[0]->GetMaxVel());
+        return true;
     }
 
     virtual bool IsDone()
@@ -286,75 +386,48 @@ class ServoController : public ControllerBase
 
 private:
 
-  void generate_octave_file(void)
-  {
-    size_t size = _phi_tvec[0].size();
-    cout << "Size: " << size << endl;
-
-    //-- Servos angle
-    for (size_t s=0; s<_phi_tvec.size(); s++) {
-      outFile << "phi" << s <<"=[";
-      for (size_t t=0; t<size; t++) {
-        outFile << _phi_tvec[s][t]*180/PI << ",";
-      }
-      outFile << "];" << endl;
+    void generate_octave_file()
+    {
+        //Export all servo data by default
+        generate_octave_file(0,_phi_tvec.size());
     }
+    
 
-    //-- Reference positions
-    for (size_t s=0; s<_ref_tvec.size(); s++) {
-      outFile << "ref" << s <<"=[";
-      for (size_t t=0; t<size; t++) {
-        outFile << _ref_tvec[s][t]*180/PI << ",";
-      }
-      outFile << "];" << endl;
+    /**
+     * Export servo data to a txt file by row.
+     * The first column contains the name of the data field, and subsequent columns the data. 
+     * Currently, there are no time-indexes available, but it will be exported in a future release.
+     */
+    void generate_octave_file(size_t startDOF, size_t stopDOF)
+    {
+
+        size_t size = _phi_tvec[0].size();
+        RAVELOG_INFO("Timesteps: %d\n",size);
+        //Account for the fact that stopDOF is an index and not a quantity:
+        stopDOF++;
+        // Servo properties (gains)
+
+        outFile << "Kp " << _KP << " Ki " << _KI << " Kd " << _KD << " Kf " << _Kf << " Ka " << _Ka << endl ;
+
+        //-- Servos angle
+        for (size_t s=startDOF; s<stopDOF; s++) {
+            outFile << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
+            for (size_t t=0; t<size; t++) {
+                outFile << _phi_tvec[s][t]*180/PI << " ";
+            }
+            outFile << endl;
+        }
+
+        //-- Reference positions
+        for (size_t s=startDOF; s<stopDOF; s++) {
+            outFile << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
+            for (size_t t=0; t<size; t++) {
+                outFile << _ref_tvec[s][t]*180/PI << " ";
+            }
+            outFile << endl;
+        }
+
     }
-
-    //-- Time
-    outFile << "t=[0:1:" << size-1 << "];" << endl;
-
-    //-- Plot the servo angles
-    outFile << "plot(";
-    for (size_t s=0; s<_phi_tvec.size(); s++) {
-      outFile << "t,phi" << s << ",'-'";
-
-      //-- Add a ',' except for the last element
-      if (s<_phi_tvec.size()-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-    //-- Plot the reference positions
-    outFile << "hold on;";
-    outFile << "plot(";
-    for (size_t s=0; s<_ref_tvec.size(); s++) {
-      outFile << "t,ref" << s << ",'-'";
-
-      //-- Add a ',' except for the last element
-      if (s<_ref_tvec.size()-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-
-    //-- Add the legents
-    outFile << "legend(";
-    for (size_t s=0; s<_phi_tvec.size(); s++) {
-      outFile << "'Servo " << s << "'";
-
-      //-- Add a ',' except for the last element
-      if (s<_phi_tvec.size()-1)
-        outFile << ",";
-    }
-    outFile << ");" << endl;
-
-
-    outFile << "grid on;" << endl;
-    outFile << "title('Servos angle')" << endl;
-    outFile << "xlabel('Simulation time')" << endl;
-    outFile << "ylabel('Angle (degrees)')" << endl;
-    outFile << "axis([0," << size-1 << ",-90, 90])" << endl;
-    outFile << "pause;" << endl;
-  }
 
 protected:
     RobotBasePtr _probot;
@@ -363,17 +436,21 @@ protected:
 
     ControllerBasePtr _pvelocitycontroller;
     std::vector<KinBody::JointPtr> _joints;
-    std::vector<dReal> _ref_pos;  //-- Reference positions (in radians)
+    std::vector<dReal> _ref_pos;  // Reference positions (in radians)
+    std::vector<dReal> _error;    // Current tracking error  
+    std::vector<dReal> _dError;   // Tracking error rate
+    std::vector<dReal> _errSum;   // tracking error sum (decaying)
     dReal _KP;                    //-- P controller KP constant
+    dReal _KI;
+    dReal _KD;
+    dReal _Kf;                    // -- "Forgetting" constant of integrator
+    dReal _Ka;                    // -- first order filter for derivative
 
     //-- For recording....
     ofstream outFile;                 //-- Stream file for storing the servo positions
     bool _recording;                  //-- Recording mode
     std::vector<tvector> _phi_tvec;     //-- Servo's angles in time
     std::vector<tvector> _ref_tvec;     //-- Servo's reference positions in time
-
-   
-
 
 };
 

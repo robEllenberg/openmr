@@ -41,7 +41,7 @@ class SinosController : public ControllerBase
         _phase0.resize(_probot->GetDOF());
         _offset.resize(_probot->GetDOF());
 
-        cout << "OPENMR: Sinoscontroller: INIT" << endl;
+        RAVELOG_DEBUG("OPENMR: Sinoscontroller: INIT\n");
 
         Reset(0);
         return true;

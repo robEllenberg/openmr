@@ -1,7 +1,6 @@
 cmake_minimum_required (VERSION 2.6.0)
 project (openrave-modular-robots-examples)
 
-
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 find_package(OpenRAVE REQUIRED)
 
@@ -22,6 +21,8 @@ endif()
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Modules/")
 
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread)
 
