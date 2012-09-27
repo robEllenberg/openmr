@@ -141,7 +141,7 @@ class ServoController : public ControllerBase
 
         is << "setvelocity ";
 
-        //-- K controller for all the joints
+        //-- PID controller for all the joints
         for (size_t i=0; i<_joints.size(); i++) {
             
             //Kr is the opposit of Kf, which controls %remaining over time. kr=.9 -> e=.9 after 1 second
@@ -198,10 +198,11 @@ class ServoController : public ControllerBase
       return true;
     }
 
-    /*****************************************************************/
-    /* SetPos command. Set the reference position of ALL the joints  */
-    /* The joint angles are in degreees                              */
-    /*****************************************************************/
+    /**
+     * Set Position of all joints.
+     * The command format is: "setpos angle0 angle1 angle2 ... angleN", where angle is in degrees.
+     * Note that ALL joints must be specified or the command will fail
+     */
     bool SetPos(std::ostream& os, std::istream& is)
     {
         //Get all the joint limits from the robot
@@ -231,11 +232,11 @@ class ServoController : public ControllerBase
         return true;
     }
 
-    /*********************************************************/
-    //-- Set the position of 1 joint
-    //-- The format is: servo angle (in degrees)
-    //-- Servo number starts from 0
-    /*********************************************************/
+    /**
+     * Set Position of 1 joint.
+     * The command format is: "setpos1 servo# angle", where angle is in degrees.
+     * The servo number is 0-indexed
+     */
     bool SetPos1(std::ostream& os, std::istream& is)
     {
         int servo;
