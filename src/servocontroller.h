@@ -107,6 +107,7 @@ class ServoController : public ControllerBase
         _KI=0;
         _Kf=.1;
         _Ka=.01;
+        _limitpad=.03;
 
     }
 
@@ -203,17 +204,31 @@ class ServoController : public ControllerBase
     /*****************************************************************/
     bool SetPos(std::ostream& os, std::istream& is)
     {
-      for(size_t i = 0; i < _ref_pos.size(); ++i) {
-        dReal pos;
-        is >> pos;
+        //Get all the joint limits from the robot
 
-        if( !is )
-          return false;
+        std::vector<dReal> lower(_ref_pos.size());
+        std::vector<dReal> upper(_ref_pos.size());
+        _probot->GetDOFLimits(lower,upper);
 
-        //-- Store the reference positions in radians
-        _ref_pos[i]=pos*PI/180;
-      }
-      return true;
+        for(size_t i = 0; i < _ref_pos.size(); ++i) {
+            dReal pos;
+            is >> pos;
+
+            if( !is )
+                return false;
+
+            //-- Store the reference positions in radians
+            pos=pos*PI/180.0;
+
+            //TODO obviously this will not work for joints with a ROM smaller
+            //than 2*_limitpad.  Shouldn't be an issue, but future releases
+            //will fix it.
+            if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
+            else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
+            else _ref_pos[i]=pos;
+            //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
+        }
+        return true;
     }
 
     /*********************************************************/
@@ -223,17 +238,25 @@ class ServoController : public ControllerBase
     /*********************************************************/
     bool SetPos1(std::ostream& os, std::istream& is)
     {
-      int servo;
-      dReal pos;
-      is >> servo;
-      is >> pos;
+        int servo;
+        dReal pos;
+        is >> servo;
+        is >> pos;
 
+        //TODO: Make this work for multiple DOF joints
+        std::vector<dReal> lower(1);
+        std::vector<dReal> upper(1);
+        _probot->GetJointFromDOFIndex(servo)->GetLimits(lower,upper);
 
-      //-- TODO: Check errors!!!!!
-      //-- Store the reference positions in radians
-      _ref_pos[servo]=pos*PI/180;
-           
-      return true;
+        //-- Store the reference position in radians
+        pos=pos*PI/180.0;
+        if ((lower[0]+_limitpad)>pos) _ref_pos[servo]=lower[0]+_limitpad;
+        else if ((upper[0]-_limitpad)<pos) _ref_pos[servo]=upper[0]-_limitpad;
+        else _ref_pos[servo]=pos;
+
+        //RAVELOG_DEBUG("Limits %f,%f, Input %f, Servo %d Position: %f\n",lower[0],upper[0],pos, servo,_ref_pos[servo]);
+
+        return true;
     }
 
     
@@ -445,6 +468,8 @@ protected:
     dReal _KD;
     dReal _Kf;                    // -- "Forgetting" constant of integrator
     dReal _Ka;                    // -- first order filter for derivative
+    dReal _limitpad;             // a global soft limit padding to prevent overshoot across joint limits
+                                 // This is a bandaid fix...
 
     //-- For recording....
     ofstream outFile;                 //-- Stream file for storing the servo positions
