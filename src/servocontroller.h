@@ -28,22 +28,22 @@ class ServoController : public ControllerBase
     {
         //TODO: Add a way to set gains per joint to match physical behavior
         __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov";
-        RegisterCommand("Test",boost::bind(&ServoController::Test,this,_1,_2),
+        RegisterCommand("test",boost::bind(&ServoController::Test,this,_1,_2),
                 "Command for testing and debugging");
-        RegisterCommand("Setpos",boost::bind(&ServoController::SetPos,this,_1,_2),
-                "Format: Setpos s1 [s2]. Set the reference position of all the robot joints, in degrees, in the range [-90,90]. If the robot have N joints, there have to be N arguments");
-        RegisterCommand("Setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
-                "Format: Setpos1 servo pos. Set the reference position of one joint. The argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
-        RegisterCommand("Setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
-                "Format: Setgains kp [kd] [ki] [kf] [ka]. Set gains for the PID controller. kp, ki, and kd are independent gains (may change in a future release. kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and ka is the first order filter coeficient for the error rate (1 = no filtering, ka -> 0 gives less filtering).");
-        RegisterCommand("Getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
-                "Format: Getpos. Get the position of ALL the servos (in degrees)");
-        RegisterCommand("Getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
-                "Format: Getpos servo. Returns the current servo position (in degrees). The argument servo is the servo number, starting from 0");
-        RegisterCommand("Record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),
-                "Format: Record_on . Start recording the servo positions and references to memory");
-        RegisterCommand("Record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
-                "Format: Record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
+        RegisterCommand("setpos",boost::bind(&ServoController::SetPos,this,_1,_2),
+                "Format: setpos s1 s2...sN\n Set the reference position of all the robot joints, in degrees, in the range [-90,90]. If the robot have N joints, there have to be N arguments");
+        RegisterCommand("setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
+                "Format: setpos1 servo# pos\n Set the reference position of one joint. The first argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
+        RegisterCommand("setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
+                "Format: setgains Kp [Ki] [Kd] [Kf] [Ka]. Set gains for the PID controller. Kp, Ki, and Kd are independent gains (may change in a future release. Kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and Ka is the first order filter coeficient for the error rate (1 = no filtering, Ka -> 0 gives less filtering).");
+        RegisterCommand("getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
+                "Format: getpos. Get the position of ALL the servos (in degrees)");
+        RegisterCommand("getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
+                "Format: getpos servo. Returns the current servo position (in degrees). The argument servo is the servo number, starting from 0");
+        RegisterCommand("record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),
+                "Format: record_on . Start recording the servo positions and references to memory");
+        RegisterCommand("record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
+                "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
 
     }
     virtual ~ServoController() {}
@@ -266,45 +266,18 @@ class ServoController : public ControllerBase
      */
     bool SetGains(std::ostream& os, std::istream& is)
     {
-      dReal kp;
-      dReal kd;
-      dReal ki;
-      dReal kf;
-      dReal ka;
 
-      is >> kp;
-      is >> ki;
-      is >> kd;
-      is >> kf;
-      is >> ka;
+        // Since we may only want to set a few gains, don't freak out if the last few are not specified
+        getFromStream(is,_KP,0.0,10000.0,"Porportional Gain Kp");
+        getFromStream(is,_KI,0.0,10000.0,"Integral Gain Ki");
+        getFromStream(is,_KD,0.0,10000.0,"Derivative Gain Kd");
+        getFromStream(is,_Kf,0.0,10000.0,"Integrator Decay Kf");
+        getFromStream(is,_Ka,0.0,10000.0,"Differentiator Decay Ka");
 
-      if (kp >= 0.0) {
-          _KP = kp;
-          RAVELOG_VERBOSE("Kp Gain is now: %f\n",_KP);
-      }
-      else RAVELOG_ERROR("Kp Gain %f is out of range, ignoring...\n",kp);
-
-      _KD = kd;
-      RAVELOG_VERBOSE("Kd Gain is now: %f\n",_KD);
-
-      _KI = ki;
-      RAVELOG_VERBOSE("Ki Gain is now: %f\n",_KI);
-      
-      if (kf>=0 && kf<=1)
-      {
-          _Kf = kf;
-          RAVELOG_VERBOSE("Kf decay rate is now: %f\n",_Kf);
-      }
-
-      if (ka>=0 && ka<=1)
-      {
-          _Ka = ka;
-          RAVELOG_VERBOSE("Ka filter constant is now: %f\n",_Ka);
-      }
-
-      //This function doesn't "fail" exactly, so return true for now... 
-      return true;
+        //This function doesn't "fail" exactly, so return true for now... 
+        return true;
     }
+
 
     /*********************************************************/
     //-- Get the position of ALL the servos (in degrees)
@@ -406,8 +379,27 @@ class ServoController : public ControllerBase
     virtual RobotBasePtr GetRobot() const { return _probot; }
 
 
-
 private:
+
+    
+    /**
+     * Get a value from a string stream.
+     * This function adds a few checks to the process of extracting input values, such as validity and bounds checking.
+     * Obviously this slows things down a little, so it probably shouldn't be used for realtime functions.
+     */
+    bool getFromStream(std::istream& is, dReal &K, const dReal& min, const dReal& max, char name[])
+    {
+        dReal k;
+        if (is >> k) {
+            if (k >= min && k <= max) {
+                K = k;
+                RAVELOG_VERBOSE("%s is now: %f\n",name,K);
+                return true;
+            }
+            else RAVELOG_ERROR("%s %f is out of range, ignoring...\n",name,k);
+        } else RAVELOG_VERBOSE("%s not read",name);
+        return false;
+    }
 
     void generate_octave_file()
     {
@@ -449,7 +441,6 @@ private:
             }
             outFile << endl;
         }
-
     }
 
 protected:
