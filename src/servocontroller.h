@@ -35,7 +35,7 @@ class ServoController : public ControllerBase
         RegisterCommand("setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
                 "Format: setpos1 servo# pos\n Set the reference position of one joint. The first argument servo is the servo number, starting from 0. The argument pos is the reference position (in degrees) [-90,90] ");
         RegisterCommand("setgains",boost::bind(&ServoController::SetGains,this,_1,_2),
-                "Format: setgains Kp [Ki] [Kd] [Kf] [Ka]. Set gains for the PID controller. Kp, Ki, and Kd are independent gains (may change in a future release. Kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and Ka is the first order filter coeficient for the error rate (1 = no filtering, Ka -> 0 gives less filtering).");
+                "Format: setgains Kp [Ki] [Kd] [Kf] [Ka]. Set gains for the PID controller. Kp, Ki, and Kd are constant for all joints (may change in a future release. Kf is a decay constant for the integrator (0 = no decay, 1 = instant decay), and Ka is the first order filter coeficient for the error rate (1 = no filtering, Ka -> 0 gives less filtering).");
         RegisterCommand("getpos",boost::bind(&ServoController::GetPos,this,_1,_2),
                 "Format: getpos. Get the position of ALL the servos (in degrees)");
         RegisterCommand("getpos1",boost::bind(&ServoController::GetPos1,this,_1,_2),
@@ -80,6 +80,7 @@ class ServoController : public ControllerBase
     }
 
     virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
+
     virtual int IsControlTransformation() const { return _nControlTransformation; }
 
     virtual void Reset(int options)
@@ -105,13 +106,42 @@ class ServoController : public ControllerBase
         _KP=8.3;
         _KD=0;
         _KI=0;
-        _Kf=.1;
-        _Ka=.01;
+        _Kf=.9998;
+        _Ka=.1;
         _limitpad=.03;
 
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) 
+    { 
+        //Get all the joint limits from the robot
+        std::vector<dReal> lower(_ref_pos.size());
+        std::vector<dReal> upper(_ref_pos.size());
+        _probot->GetDOFLimits(lower,upper);
+
+        if ( values.size() < _ref_pos.size())
+        {
+            RAVELOG_WARN("Not enough values, %d < %d\n",values.size(),_ref_pos.size());
+            return false;
+        }
+
+        dReal pos;
+        for(size_t i = 0; i < _ref_pos.size(); ++i) {
+
+            //-- Store the reference positions in radians
+            pos=values[i]*PI/180.0;
+
+            //TODO obviously this will not work for joints with a ROM smaller
+            //than 2*_limitpad.  Shouldn't be an issue, but future releases
+            //will fix it.
+            if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
+            else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
+            else _ref_pos[i]=pos;
+            //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
+        }
+        return true;
+
+    }
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
@@ -121,6 +151,9 @@ class ServoController : public ControllerBase
 
     virtual void SimulationStep(dReal fTimeElapsed)
     {
+        //TODO: Why would this happen? should this be a more graceful failure?
+        assert(fTimeElapsed > 0.0);
+
         std::vector<dReal> angle;
         int dof=_probot->GetDOF();
         //std::vector<dReal> error(dof);
@@ -132,46 +165,26 @@ class ServoController : public ControllerBase
         dReal error,derror;
         //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
-        //Copy code from odecontroller.h to get all DOF velocities. For now,
-        //gamble that velocities are "constant" enough that an environment lock
-        //isn't necessary.
-        //int dofindex = 0;
-        //std::vector<OpenRAVE::dReal> valldofvelocities;
-        //_probot->GetDOFVelocities(valldofvelocities);
-
-        is << "setvelocity ";
-
-        //-- K controller for all the joints
         for (size_t i=0; i<_joints.size(); i++) {
             
-            //Kr is the opposit of Kf, which controls %remaining over time. kr=.9 -> e=.9 after 1 second
-            // Assume fTimeElapsed << 1 sec.
-            dReal kr = (1-_Kf*fTimeElapsed);
-            //TODO: (low) Fix this to handle joint DOF varieties properly...mix of standards here?
-            //-- Get the current joint angle
+            //TODO: (low) Fix this to handle joint DOF varieties properly
+            // Potential slowdown due to dynamic resizing of array?
             _joints[i]->GetValues(angle);
 
-            //-- Calculate the distance to the reference position (error)
-            //-- and the desired velocity
-            error = angle[0] - _ref_pos[i];
-
-            //TODO: Why would this happen? should this be a more graceful failure?
-            assert(fTimeElapsed > 0.0);
+            error = _ref_pos[i] - angle[0];
 
             // find dError / dt and low-pass filter the data with hard-coded alpha
             derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
 
             // Calculate decaying integration
-            _errSum[i] = error*fTimeElapsed + _errSum[i]*kr;
+            _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
 
-            velocity[i] = -error*_KP - derror*_KD - _errSum[i]*_KI; 
+            velocity[i] = error*_KP + derror*_KD +  _errSum[i]*_KI; 
 
             //-- Limit the velocity to its maximum
             dReal Maxvel = _joints[i]->GetMaxVel();
             if (velocity[i] > Maxvel) velocity[i] = Maxvel;
             if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
-
-            is << velocity[i] << " ";
 
             //-- Store the current sample (only in recording mode)
             if (_recording) {
@@ -185,8 +198,8 @@ class ServoController : public ControllerBase
 
         }
 
-        //-- Set the joints velocities
-        _pvelocitycontroller->SendCommand(os,is);
+        // Assign desired joint velocities
+        _pvelocitycontroller->SetDesired(velocity);
         
     }
 
@@ -271,8 +284,8 @@ class ServoController : public ControllerBase
         getFromStream(is,_KP,0.0,10000.0,"Porportional Gain Kp");
         getFromStream(is,_KI,0.0,10000.0,"Integral Gain Ki");
         getFromStream(is,_KD,0.0,10000.0,"Derivative Gain Kd");
-        getFromStream(is,_Kf,0.0,10000.0,"Integrator Decay Kf");
-        getFromStream(is,_Ka,0.0,10000.0,"Differentiator Decay Ka");
+        getFromStream(is,_Kf,0.0,1.0,"Integrator Decay Kf");
+        getFromStream(is,_Ka,0.0,1.0,"Differentiator Decay Ka");
 
         //This function doesn't "fail" exactly, so return true for now... 
         return true;
