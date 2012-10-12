@@ -111,7 +111,36 @@ class ServoController : public ControllerBase
 
     }
 
-    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
+    virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) 
+    { 
+        //Get all the joint limits from the robot
+        std::vector<dReal> lower(_ref_pos.size());
+        std::vector<dReal> upper(_ref_pos.size());
+        _probot->GetDOFLimits(lower,upper);
+
+        if ( values.size() < _ref_pos.size())
+        {
+            RAVELOG_WARN("Not enough values, %d < %d\n",values.size(),_ref_pos.size());
+            return false;
+        }
+
+        dReal pos;
+        for(size_t i = 0; i < _ref_pos.size(); ++i) {
+
+            //-- Store the reference positions in radians
+            pos=values[i]*PI/180.0;
+
+            //TODO obviously this will not work for joints with a ROM smaller
+            //than 2*_limitpad.  Shouldn't be an issue, but future releases
+            //will fix it.
+            if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
+            else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
+            else _ref_pos[i]=pos;
+            //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
+        }
+        return true;
+
+    }
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
@@ -146,7 +175,7 @@ class ServoController : public ControllerBase
             
             //Kr is the opposit of Kf, which controls %remaining over time. kr=.9 -> e=.9 after 1 second
             // Assume fTimeElapsed << 1 sec.
-            dReal kr = (1-_Kf*fTimeElapsed);
+            dReal kr = _Kf;
             //TODO: (low) Fix this to handle joint DOF varieties properly...mix of standards here?
             //-- Get the current joint angle
             _joints[i]->GetValues(angle);
