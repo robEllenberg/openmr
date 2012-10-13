@@ -55,6 +55,8 @@ class TrajectoryController : public ControllerBase
 
             _running=false;
             _complete=false;
+            _forward=true;
+            _softstart=0;
 
             _time=0.0;
             _runtime=0.0;
@@ -82,36 +84,26 @@ class TrajectoryController : public ControllerBase
                 Reset(0);
                 _traj = ptraj;
                 _spec = ptraj->GetConfigurationSpecification(); //Redundant?
-                std::vector<dReal> waypoint;
-                dReal dt=0;
-
-                //KLUDGE: Extract total runtime so we know when sampling is complete.
-                for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
-                    _traj->GetWaypoint(i,waypoint);
-                    _itdata=waypoint.begin();
-                    _spec.ExtractDeltaTime(dt,_itdata);
-                    _runtime+=dt;
-                }
-                //Assume it's good for now
-                return true;
+                return SetupTrajectory();
             }
+            RAVELOG_WARN("No trajectory provided, ignoring...\n");
             return false;
         }
 
         virtual void SimulationStep(dReal fTimeElapsed)
         {
-            _time+=fTimeElapsed;
             //RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
             //-- Update the servos
             _pservocontroller->SimulationStep(fTimeElapsed);
 
-            if (_time>_runtime) {
+            if (_time>=_runtime || _time < 0.0) {
                 //TODO: should be some kind of interlock here...
                 _complete=true;
                 _running=false;
             }
 
             if (_running && !_complete) {
+                _forward ? _time+=fTimeElapsed : _time-=fTimeElapsed;
 
                 // Find the closest number of simulation steps needed to
                 // approximate the desired timestep
@@ -136,17 +128,46 @@ class TrajectoryController : public ControllerBase
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             //-- Set position command. The joint angles are received in degrees
-            if ( cmd == "setperiod" ) {
-                is >> _timestep;
-                _samplingperiod=_timestep;
-                return true;
+            if ( cmd == "set" ) {
+                //Read in single number / boolean settings
+                dReal temp;
+                string cmd2;
+                bool flag;
+                while (is){
+                    is >> cmd2;
+                    is >> temp;
+                    if ( cmd2 == "timestep") {
+                        if (temp > 0) {
+                            _timestep=temp;
+                        }
+                        else RAVELOG_WARN("Timestep %f out of range, ignoring\n",_timestep);
+                    }
+                    else if ( cmd2 == "softstart" ) {
+                        //NOTE: This setting does not do anything yet
+                        _softstart=temp;
+                        RAVELOG_WARN("Softstart is not currently implemented...\n");
+                    }
+                }
             }
             else if ( cmd == "run" ) {
-                string mode;
-                is >> mode;
-
-                if (mode=="on") _running=true;
-                else _running=false;
+                _running=true;
+                return true;
+            } 
+            else if ( cmd == "pause" ) {
+                _running=false;
+                return true;
+            } 
+            else if ( cmd == "stop" ) {
+                //TODO: Differentiate these somehow?
+                _running=false;
+                return true;
+            } 
+            else if ( cmd == "reverse" ) {
+                _forward=false;
+                return true;
+            } 
+            else if ( cmd == "forward" ) {
+                _forward=true;
                 return true;
             } 
             else if ( cmd == "record_on" || cmd == "record_off") {
@@ -170,6 +191,34 @@ class TrajectoryController : public ControllerBase
         virtual RobotBasePtr GetRobot() const { return _probot; }
 
     private:
+
+        bool SetupTrajectory() {
+            std::vector<dReal> waypoint;
+            dReal dt=0;
+            //TODO: add initial pose as softstart here.
+            //KLUDGE: Extract total runtime so we know when sampling is complete.
+            for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
+                _traj->GetWaypoint(i,waypoint);
+                _itdata=waypoint.begin();
+                _spec.ExtractDeltaTime(dt,_itdata);
+                _runtime+=dt;
+            }
+
+            if (_runtime>0 && _traj->GetNumWaypoints()>0)
+                return true;
+            else {
+                RAVELOG_ERROR("Trajectory not usable, aborting...\n");
+                Reset(0);
+                return false;
+            }
+
+        }
+
+        inline const char * const BoolToString(bool b)
+        {
+            return b ? "true" : "false";
+        }
+
         //-- Calculate the reference position and send to the servos
         void SetRefPos() 
         { 
@@ -182,8 +231,8 @@ class TrajectoryController : public ControllerBase
 
             //Extract all joint values from the current pose and store as the new reference
             _spec.ExtractJointValues(_itref,_itdata,_probot,_dofindices);
-            RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
-            RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
+            //RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
+            //RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
 
             //-- Set the new servos reference positions
             _pservocontroller->SetDesired(_ref_pos);
@@ -201,7 +250,10 @@ class TrajectoryController : public ControllerBase
         dReal _cycletime;
 
         bool _running;        
+        bool _forward;        
         bool _complete; // Trajectory complete flag
+        dReal _softstart;
+
         //TODO: make enumerated run states
 
         /** Timestep for trajectory sampling */
@@ -209,6 +261,7 @@ class TrajectoryController : public ControllerBase
 
         dReal _time;
         dReal _runtime;
+
         std::vector<dReal> _ref_pos;   //-- Reference positions for the servos (in degrees)
 
         TrajectoryBaseConstPtr _traj; //Loaded trajectory from input command
