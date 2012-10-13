@@ -78,27 +78,30 @@ class TrajectoryController : public ControllerBase
         {
             //TODO: Error checking, for now assume a new trajectory means
             //completely trash everything.
-            Reset(0);
-            _traj = ptraj;
-            _spec = ptraj->GetConfigurationSpecification(); //Redundant?
-            std::vector<dReal> waypoint;
-            dReal dt=0;
+            if (ptraj != NULL){
+                Reset(0);
+                _traj = ptraj;
+                _spec = ptraj->GetConfigurationSpecification(); //Redundant?
+                std::vector<dReal> waypoint;
+                dReal dt=0;
 
-            //KLUDGE: Extract total runtime so we know when sampling is complete.
-            for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
-                _traj->GetWaypoint(i,waypoint);
-                _itdata=waypoint.begin();
-                _spec.ExtractDeltaTime(dt,_itdata);
-                _runtime+=dt;
+                //KLUDGE: Extract total runtime so we know when sampling is complete.
+                for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
+                    _traj->GetWaypoint(i,waypoint);
+                    _itdata=waypoint.begin();
+                    _spec.ExtractDeltaTime(dt,_itdata);
+                    _runtime+=dt;
+                }
+                //Assume it's good for now
+                return true;
             }
-
             return false;
         }
 
         virtual void SimulationStep(dReal fTimeElapsed)
         {
             _time+=fTimeElapsed;
-            RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
+            //RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
             //-- Update the servos
             _pservocontroller->SimulationStep(fTimeElapsed);
 
@@ -114,7 +117,7 @@ class TrajectoryController : public ControllerBase
                 // approximate the desired timestep
                 _samplingperiod = round(_timestep/fTimeElapsed);
                 _samplingtics ++;
-                RAVELOG_VERBOSE("Estimated %d sim steps per trajectory sample\n",_samplingperiod);
+                //RAVELOG_VERBOSE("Estimated %d sim steps per trajectory sample\n",_samplingperiod);
 
                 if (_samplingtics >= _samplingperiod) {
                     _samplingtics=0;
@@ -136,7 +139,6 @@ class TrajectoryController : public ControllerBase
             if ( cmd == "setperiod" ) {
                 is >> _timestep;
                 _samplingperiod=_timestep;
-                SetRefPos();
                 return true;
             }
             else if ( cmd == "run" ) {
@@ -180,8 +182,8 @@ class TrajectoryController : public ControllerBase
 
             //Extract all joint values from the current pose and store as the new reference
             _spec.ExtractJointValues(_itref,_itdata,_probot,_dofindices);
-            RAVELOG_DEBUG("  Setting Ref, sample time is %f\n",_time);
-            RAVELOG_DEBUG("Reference position %d is %f",11,_ref_pos[11]);
+            RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
+            RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
 
             //-- Set the new servos reference positions
             _pservocontroller->SetDesired(_ref_pos);
