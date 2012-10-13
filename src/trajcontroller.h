@@ -41,7 +41,7 @@ class TrajectoryController : public ControllerBase
             _pose.resize(_probot->GetDOF()+7+1);
             //TODO: deal with velocity groups properly
 
-            RAVELOG_DEBUG("rajectory Controller initialized\n");
+            RAVELOG_DEBUG("Trajectory Controller initialized\n");
 
             Reset(0);
             return true;
@@ -63,13 +63,16 @@ class TrajectoryController : public ControllerBase
                 //Initialize references to default
                 _ref_pos[i]=0;
 
-                RAVELOG_INFO("Trajectory Controller Reset!\n");
             }
+            RAVELOG_INFO("Trajectory Controller Reset!\n");
         }
 
         virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
         virtual int IsControlTransformation() const { return _nControlTransformation; }
-        virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) { return false; }
+        virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
+        { 
+            return _pservocontroller->SetDesired(values,trans); 
+        }
 
         virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
         {
