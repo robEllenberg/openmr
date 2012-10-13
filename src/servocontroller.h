@@ -128,8 +128,8 @@ class ServoController : public ControllerBase
         dReal pos;
         for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
-            //-- Store the reference positions in radians
-            pos=values[i]*PI/180.0;
+            //CHANGE: All commands are in radians now
+            pos=values[i];
 
             //TODO obviously this will not work for joints with a ROM smaller
             //than 2*_limitpad.  Shouldn't be an issue, but future releases
@@ -231,7 +231,7 @@ class ServoController : public ControllerBase
                 return false;
 
             //-- Store the reference positions in radians
-            pos=pos*PI/180.0;
+            //pos=pos*PI/180.0;
 
             //TODO obviously this will not work for joints with a ROM smaller
             //than 2*_limitpad.  Shouldn't be an issue, but future releases
