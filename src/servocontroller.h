@@ -393,7 +393,6 @@ class ServoController : public ControllerBase
 
 
 private:
-
     
     /**
      * Get a value from a string stream.
@@ -467,13 +466,20 @@ protected:
     std::vector<dReal> _error;    // Current tracking error  
     std::vector<dReal> _dError;   // Tracking error rate
     std::vector<dReal> _errSum;   // tracking error sum (decaying)
-    dReal _KP;                    //-- P controller KP constant
+    
+    /** Controller gains */
+    dReal _KP;                    
     dReal _KI;
     dReal _KD;
+
+    /** Filter constants for integrator and differentiator */
     dReal _Kf;                    // -- "Forgetting" constant of integrator
     dReal _Ka;                    // -- first order filter for derivative
-    dReal _limitpad;             // a global soft limit padding to prevent overshoot across joint limits
-                                 // This is a bandaid fix...
+
+    // a global soft limit padding to prevent overshoot across joint limits
+    // This is a bandaid fix...
+    dReal _limitpad;
+    dReal _time;
 
     //-- For recording....
     ofstream outFile;                 //-- Stream file for storing the servo positions
