@@ -22,7 +22,7 @@ class TrajectoryController : public ControllerBase
     public:
         TrajectoryController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
-        __description = "Sinusoidal oscillator controller by Juan Gonzalez-Gomez";
+        __description = "Trajectory controller based on Sinusoidal oscillator by Juan Gonzalez-Gomez";
     }
         virtual ~TrajectoryController() {}
 
@@ -37,11 +37,11 @@ class TrajectoryController : public ControllerBase
             _pservocontroller->Init(_probot,_dofindices, nControlTransformation);
 
             _ref_pos.resize(_probot->GetDOF());
-            _amplitude.resize(_probot->GetDOF());
-            _phase0.resize(_probot->GetDOF());
-            _offset.resize(_probot->GetDOF());
+            //Assume Affine DOF + time index gives 8 additional datapoints
+            _pose.resize(_probot->GetDOF()+7+1);
+            //TODO: deal with velocity groups properly
 
-            RAVELOG_DEBUG("OPENMR: Trajectorycontroller: INIT\n");
+            RAVELOG_DEBUG("rajectory Controller initialized\n");
 
             Reset(0);
             return true;
@@ -50,23 +50,21 @@ class TrajectoryController : public ControllerBase
         virtual void Reset(int options)
         {
             _samplingtics=0;
-            _period=1;
-            _N=20;
-            _n=0;
-            _phase=0;
+            _timestep=.01; //100 Hz default
             _cycletime=0;
+
             _running=false;
+            _complete=false;
 
             _time=0.0;
+            _runtime=0.0;
 
             for (int i=0; i<_probot->GetDOF(); i++) {
+                //Initialize references to default
                 _ref_pos[i]=0;
-                _amplitude[i]=0;
-                _phase0[i]=0;
-                _offset[i]=0;
+
+                RAVELOG_INFO("Trajectory Controller Reset!\n");
             }
-            SetRefPos();
-            RAVELOG_INFO("Trajectory Controller Reset!\n");
         }
 
         virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
@@ -75,36 +73,54 @@ class TrajectoryController : public ControllerBase
 
         virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
         {
-            ConfigurationSpecification spec = ptraj->GetConfigurationSpecification();
-            std::vector<dReal> data;
-            std::vector<dReal>::iterator it;
-            dReal dt;
             //TODO: Error checking, for now assume a new trajectory means
             //completely trash everything.
             Reset(0);
-            //TODO: Read in data
+            _traj = ptraj;
+            _spec = ptraj->GetConfigurationSpecification(); //Redundant?
+            std::vector<dReal> waypoint;
+            dReal dt=0;
+
+            //KLUDGE: Extract total runtime so we know when sampling is complete.
+            for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
+                _traj->GetWaypoint(i,waypoint);
+                _itdata=waypoint.begin();
+                _spec.ExtractDeltaTime(dt,_itdata);
+                _runtime+=dt;
+            }
+
             return false;
         }
 
         virtual void SimulationStep(dReal fTimeElapsed)
         {
-            //-- Simulate the servos
+            _time+=fTimeElapsed;
+            RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
+            //-- Update the servos
             _pservocontroller->SimulationStep(fTimeElapsed);
 
-            //-- If the running mode is not set, return
-            if (!_running) return;
-
-            _samplingperiod = round(_period/(_N*fTimeElapsed));
-            _samplingtics ++;
-            //cout << "Sampling tics: " << _samplingtics << endl;
-
-            if (_samplingtics == _samplingperiod) {
-                _samplingtics=0;
-                _n++;
-
-                //-- Calculate the next positions
-                SetRefPos();
+            if (_time>_runtime) {
+                //TODO: should be some kind of interlock here...
+                _complete=true;
+                _running=false;
             }
+
+            if (_running && !_complete) {
+
+                // Find the closest number of simulation steps needed to
+                // approximate the desired timestep
+                _samplingperiod = round(_timestep/fTimeElapsed);
+                _samplingtics ++;
+                RAVELOG_VERBOSE("Estimated %d sim steps per trajectory sample\n",_samplingperiod);
+
+                if (_samplingtics >= _samplingperiod) {
+                    _samplingtics=0;
+
+                    //-- Calculate the next positions
+                    SetRefPos();
+                }
+            }
+
         }
 
         virtual bool SendCommand(std::ostream& os, std::istream& is)
@@ -114,44 +130,13 @@ class TrajectoryController : public ControllerBase
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
             //-- Set position command. The joint angles are received in degrees
-            if( cmd == "setamplitude" ) {
-
-                for(size_t i = 0; i < _amplitude.size(); ++i) {
-                    is >> _amplitude[i];
-
-                    if( !is )
-                        return false;
-                }
+            if ( cmd == "setperiod" ) {
+                is >> _timestep;
+                _samplingperiod=_timestep;
                 SetRefPos();
                 return true;
             }
-            else if ( cmd == "setinitialphase" ) {
-                for(size_t i = 0; i < _phase0.size(); ++i) {
-                    is >> _phase0[i];
-
-                    if( !is )
-                        return false;
-                }
-                SetRefPos();
-                return true;
-            }
-            else if ( cmd == "setoffset" ) {
-                for(size_t i = 0; i < _offset.size(); ++i) {
-                    is >> _offset[i];
-
-                    if( !is )
-                        return false;
-                }
-                SetRefPos();
-                return true;
-            }
-            else if ( cmd == "setperiod" ) {
-                is >> _period;
-                _samplingperiod=_period/_N;
-                SetRefPos();
-                return true;
-            }
-            else if ( cmd == "oscillation" ) {
+            else if ( cmd == "run" ) {
                 string mode;
                 is >> mode;
 
@@ -159,31 +144,23 @@ class TrajectoryController : public ControllerBase
                 else _running=false;
                 return true;
             } 
-            else if ( cmd == "record_on" ) {
-                string file;
-                stringstream os2, is2;
+            else if ( cmd == "record_on" || cmd == "record_off") {
+                stringstream is2;
+                //Pass stream through to servocontroller directly
 
-                is >> file;
-
-                is2 << "record_on " << file << " ";
-                _pservocontroller->SendCommand(os2,is2);  
+                is2 << cmd << is.rdbuf();
+                _pservocontroller->SendCommand(os,is2);  
             }
-            else if ( cmd == "record_off" ) {
-                stringstream os2, is2;
-
-                is2 << "record_off ";
-                _pservocontroller->SendCommand(os2,is2);  
-            }        
             return true;
         }
 
         virtual bool IsDone()
         {
-            return false;
+            return _complete;
         }
         virtual dReal GetTime() const
         {
-            return 0;
+            return _time;
         }
         virtual RobotBasePtr GetRobot() const { return _probot; }
 
@@ -191,37 +168,49 @@ class TrajectoryController : public ControllerBase
         //-- Calculate the reference position and send to the servos
         void SetRefPos() 
         { 
+            //TODO: use config specs to optionally control only a subset of the joints?
+            // Sample a trajectory step and assign it to the current pose
+            _traj->Sample(_pose,_time);
 
-            for (size_t i=0; i<_ref_pos.size(); i++) {
-                _ref_pos[i]=_amplitude[i]*sin(-(360.0*_n)/(float)_N *PI/180.0 + _phase0[i]*PI/180) + _offset[i];
-            }
+            _itdata=_pose.begin();
+            _itref=_ref_pos.begin();
+
+            //Extract all joint values from the current pose and store as the new reference
+            _spec.ExtractJointValues(_itref,_itdata,_probot,_dofindices);
+            RAVELOG_DEBUG("  Setting Ref, sample time is %f\n",_time);
+            RAVELOG_DEBUG("Reference position %d is %f",11,_ref_pos[11]);
 
             //-- Set the new servos reference positions
             _pservocontroller->SetDesired(_ref_pos);
-
         }
 
     protected:
+
         RobotBasePtr _probot;
         std::vector<int> _dofindices;
         int _nControlTransformation;
+        //Low-level controller to track reference positions
         ControllerBasePtr _pservocontroller;
         int _samplingtics;
         int _samplingperiod;
         dReal _cycletime;
 
         bool _running;        
-        int _N;                   //-- Number of samples
-        int _n;                   //-- Discrete time
-        dReal _period;            //-- Oscilation period in seconds
-        dReal _phase;
+        bool _complete; // Trajectory complete flag
+        //TODO: make enumerated run states
+
+        /** Timestep for trajectory sampling */
+        dReal _timestep;           
 
         dReal _time;
+        dReal _runtime;
         std::vector<dReal> _ref_pos;   //-- Reference positions for the servos (in degrees)
-        std::vector<dReal> _amplitude; //-- Oscillation amplitudes
-        std::vector<dReal> _phase0;    //-- Oscillation initial phase
-        std::vector<dReal> _offset;    //-- Oscillation offset
 
+        TrajectoryBaseConstPtr _traj; //Loaded trajectory from input command
+        std::vector<dReal> _pose; // complete current timeslice of a loaded trajectory
+        ConfigurationSpecification _spec; //COnfiguration spec for the trajectgory (not sure we need this)
+        std::vector<dReal>::iterator _itdata; //Iterator for ConfigurationSpecification to extract data with.
+        std::vector<dReal>::iterator _itref; //Iterator for ConfigurationSpecification to extract data with.
 
 };
 
