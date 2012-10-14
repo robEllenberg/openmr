@@ -90,5 +90,6 @@ using namespace OpenRAVE;
 
 #include "servocontroller.h"
 #include "sinoscontroller.h"
+#include "trajcontroller.h"
 
 #endif
