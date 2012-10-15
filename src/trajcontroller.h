@@ -160,7 +160,7 @@ class TrajectoryController : public ControllerBase
                 else if ( cmd2 == "gains") {
                     stringstream is2;
                     //Pass stream through to servocontroller directly
-                    is2 << cmd2 << " " << is.rdbuf();
+                    is2 << "set" << cmd2 << " " << is.rdbuf();
                     return _pservocontroller->SendCommand(os,is2);  
                 }
             }
