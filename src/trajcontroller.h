@@ -68,6 +68,7 @@ class TrajectoryController : public ControllerBase
             _runtime=0.0;
             //NOTE: Smart pointers should demalloc when appropriate here
             _traj.reset();
+            boost::static_pointer_cast<ServoController>(_pservocontroller)->SetRadians();
 
             for (int i=0; i<_probot->GetDOF(); i++) {
                 //Initialize references to default

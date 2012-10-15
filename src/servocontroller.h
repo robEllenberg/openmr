@@ -118,6 +118,9 @@ class ServoController : public ControllerBase
 
         }
 
+        void SetRadians(){
+            _inradians = true;
+        }
         inline dReal GetUnitScale(){
             return _inradians ? 1.0 : PI/180 ;
         }
