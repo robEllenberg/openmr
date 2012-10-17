@@ -168,24 +168,19 @@ class ServoController : public ControllerBase
             //TODO: Why would this happen? should this be a more graceful failure?
             assert(fTimeElapsed > 0.0);
 
-            std::vector<dReal> angle;
-            int dof=_probot->GetDOF();
-            //std::vector<dReal> error(dof);
+            size_t dof=_probot->GetDOF();
+            std::vector<dReal> angles(dof);
             std::vector<dReal> lasterror(dof);
-            std::vector<dReal> velocity(dof);
-            stringstream is;
-            stringstream os;
+            std::vector<dReal> cmdvelocities(dof);
 
-            dReal error,derror;
+            _probot->GetDOFValues(angles);
+
+            dReal error,derror,maxvel;
             //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
-            for (size_t i=0; i<_joints.size(); i++) {
+            for (size_t i=0; i<dof; i++) {
 
-                //TODO: (low) Fix this to handle joint DOF varieties properly
-                // Potential slowdown due to dynamic resizing of array?
-                _joints[i]->GetValues(angle);
-
-                error = _ref_pos[i] - angle[0];
+                error = _ref_pos[i] - angles[i];
 
                 // find dError / dt and low-pass filter the data with hard-coded alpha
                 derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
@@ -193,18 +188,15 @@ class ServoController : public ControllerBase
                 // Calculate decaying integration
                 _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
 
-                velocity[i] = error*_KP + derror*_KD +  _errSum[i]*_KI; 
+                cmdvelocities[i] = error*_KP + derror*_KD +  _errSum[i]*_KI; 
 
-                //-- Limit the velocity to its maximum
-                dReal Maxvel = _joints[i]->GetMaxVel();
-                if (velocity[i] > Maxvel) velocity[i] = Maxvel;
-                if (velocity[i] < -Maxvel) velocity[i] = -Maxvel;
+                //-- Limit the cmdvelocities to its maximum
+                maxvel = _joints[i]->GetMaxVel();
+                if (cmdvelocities[i] > maxvel) cmdvelocities[i] = maxvel;
+                else if (cmdvelocities[i] < -maxvel) cmdvelocities[i] = -maxvel;
+                //TODO: windup protection, integral saturation, derivative filtering and saturation
 
                 //-- Store the current sample (only in recording mode)
-                if (_recording) {
-                    _phi_tvec[i].push_back(angle[0]);
-                    _ref_tvec[i].push_back(_ref_pos[i]);
-                }
 
                 // Update error history with new scratch value
                 _error[i] = error;
@@ -212,8 +204,16 @@ class ServoController : public ControllerBase
 
             }
 
+            //Check for record flag and copy DOF values into storage if necessary
+            if (_recording) {
+                for (size_t i=0; i<dof; i++) {
+                    _phi_tvec[i].push_back(angles[i]);
+                    _ref_tvec[i].push_back(_ref_pos[i]);
+                }
+            }
+
             // Assign desired joint velocities
-            _pvelocitycontroller->SetDesired(velocity);
+            _pvelocitycontroller->SetDesired(cmdvelocities);
 
         }
 
