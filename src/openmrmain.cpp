@@ -23,6 +23,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new ServoController(penv));
         else if( interfacename == "sinoscontroller" )
             return InterfaceBasePtr(new SinosController(penv));
+        else if( interfacename == "trajectorycontroller" )
+            return InterfaceBasePtr(new TrajectoryController(penv));
         break;
     default:
         break;
@@ -35,6 +37,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_Controller].push_back("ServoController");
     info.interfacenames[PT_Controller].push_back("SinosController");
+    info.interfacenames[PT_Controller].push_back("TrajectoryController");
 }
 
 
