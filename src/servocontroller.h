@@ -175,7 +175,7 @@ class ServoController : public ControllerBase
 
             _probot->GetDOFValues(angles);
 
-            dReal error,derror,maxvel;
+            dReal error,derror,maxvel,rawcmd,satcmd;
             //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
             for (size_t i=0; i<dof; i++) {
@@ -188,18 +188,22 @@ class ServoController : public ControllerBase
                 // Calculate decaying integration
                 _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
 
-                cmdvelocities[i] = error*_KP + derror*_KD +  _errSum[i]*_KI; 
+                rawcmd = error*_KP + derror*_KD +  _errSum[i]*_KI; 
 
                 //-- Limit the cmdvelocities to its maximum
                 maxvel = _joints[i]->GetMaxVel();
-                if (cmdvelocities[i] > maxvel) cmdvelocities[i] = maxvel;
-                else if (cmdvelocities[i] < -maxvel) cmdvelocities[i] = -maxvel;
+                if (rawcmd > maxvel) satcmd = maxvel;
+                else if (rawcmd < -maxvel) satcmd = -maxvel;
+                else satcmd=rawcmd;
+                cmdvelocities[i]=satcmd;
+
+
                 //TODO: windup protection, integral saturation, derivative filtering and saturation
 
                 //-- Store the current sample (only in recording mode)
 
                 // Update error history with new scratch value
-                _error[i] = error;
+                _error[i] = error-(rawcmd-satcmd)*fTimeElapsed/_KP;
                 _dError[i] = derror;
 
             }
