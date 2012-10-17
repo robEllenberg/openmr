@@ -121,7 +121,7 @@ class ServoController : public ControllerBase
         void SetRadians(){
             _inradians = true;
         }
-        inline dReal GetUnitScale(){
+        inline dReal GetInputScale(){
             return _inradians ? 1.0 : PI/180 ;
         }
 
@@ -142,7 +142,7 @@ class ServoController : public ControllerBase
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
                 //CHANGE: All commands are in radians now
-                pos=values[i]*GetUnitScale();
+                pos=values[i]*GetInputScale();
 
                 //TODO obviously this will not work for joints with a ROM smaller
                 //than 2*_limitpad.  Shouldn't be an issue, but future releases
@@ -292,7 +292,7 @@ class ServoController : public ControllerBase
             _probot->GetJointFromDOFIndex(servo)->GetLimits(lower,upper);
 
             //-- Store the reference position in radians
-            pos=pos*GetUnitScale();
+            pos=pos*GetInputScale();
             if ((lower[0]+_limitpad)>pos) _ref_pos[servo]=lower[0]+_limitpad;
             else if ((upper[0]-_limitpad)<pos) _ref_pos[servo]=upper[0]-_limitpad;
             else _ref_pos[servo]=pos;
@@ -333,7 +333,7 @@ class ServoController : public ControllerBase
 
                 //-- Get the current joint angle of the i'th servo
                 _joints[i]->GetValues(angle);
-                os << angle[0]/GetUnitScale() << " ";
+                os << angle[0]/GetInputScale() << " ";
             }
             return true;
         }
@@ -350,7 +350,7 @@ class ServoController : public ControllerBase
 
             //-- Get the current joint angle
             _joints[servo]->GetValues(angle);
-            os << angle[0]/GetUnitScale() << " ";
+            os << angle[0]/GetInputScale() << " ";
 
             return true;
         }
