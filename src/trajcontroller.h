@@ -23,6 +23,12 @@ class TrajectoryController : public ControllerBase
         TrajectoryController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
         __description = "Trajectory controller based on Sinusoidal oscillator by Juan Gonzalez-Gomez";
+        RegisterCommand("set",boost::bind(&TrajectoryController::SetProperties,this,_1,_2),"Format: set property value\n Use this command to set miscellaneous properties, such as the interpolation direction (forward / reverse), trajectory recording, etc.");
+        RegisterCommand("load",boost::bind(&TrajectoryController::DeserializeTrajectory,this,_1,_2),"Format: load <serialized trajectory>\n Pass in an entire serialized trajectory and load it into the controller.");
+        RegisterCommand("start",boost::bind(&TrajectoryController::StartController,this,_1,_2),"Format: start\n Start sampling and executing the loaded trajectory.");
+        RegisterCommand("stop",boost::bind(&TrajectoryController::StopController,this,_1,_2),"Format: stop\n Stop a running controller (may eventually include a time reset).");
+        RegisterCommand("pause",boost::bind(&TrajectoryController::PauseController,this,_1,_2),"Format: pause\n Pause a running controller, preserving the trajectory state.");
+
     }
         virtual ~TrajectoryController() {}
 
@@ -39,7 +45,7 @@ class TrajectoryController : public ControllerBase
             _ref_pos.resize(_probot->GetDOF());
             //Assume Affine DOF + time index gives 8 additional datapoints
             _pose.resize(_probot->GetDOF()+7+1);
-            //TODO: deal with velocity groups properly
+            //TODO: deal with derivative groups properly
 
             RAVELOG_DEBUG("Trajectory Controller initialized\n");
 
@@ -60,11 +66,13 @@ class TrajectoryController : public ControllerBase
 
             _time=0.0;
             _runtime=0.0;
+            //NOTE: Smart pointers should demalloc when appropriate here
+            _traj.reset();
+            boost::static_pointer_cast<ServoController>(_pservocontroller)->SetRadians();
 
             for (int i=0; i<_probot->GetDOF(); i++) {
                 //Initialize references to default
                 _ref_pos[i]=0;
-
             }
             RAVELOG_INFO("Trajectory Controller Reset!\n");
         }
@@ -80,7 +88,7 @@ class TrajectoryController : public ControllerBase
         {
             //TODO: Error checking, for now assume a new trajectory means
             //completely trash everything.
-            if (ptraj != NULL){
+            if ( !!ptraj){
                 Reset(0);
                 _traj = ptraj;
                 _spec = ptraj->GetConfigurationSpecification(); //Redundant?
@@ -121,62 +129,68 @@ class TrajectoryController : public ControllerBase
 
         }
 
-        virtual bool SendCommand(std::ostream& os, std::istream& is)
+        bool SetProperties(std::ostream& os, std::istream& is)
         {
-            string cmd;
-            is >> cmd;
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
-
-            //-- Set position command. The joint angles are received in degrees
-            if ( cmd == "set" ) {
-                //Read in single number / boolean settings
-                dReal temp;
-                string cmd2;
-                bool flag;
-                while (is){
-                    is >> cmd2;
+            dReal temp;
+            string cmd2;
+            bool flag;
+            while (is){
+                is >> cmd2;
+                if ( cmd2 == "timestep") {
+                is >> temp;
+                    if (temp > 0) {
+                        _timestep=temp;
+                    }
+                    else RAVELOG_WARN("Timestep %f out of range, ignoring\n",_timestep);
+                }
+                else if ( cmd2 == "softstart" ) {
                     is >> temp;
-                    if ( cmd2 == "timestep") {
-                        if (temp > 0) {
-                            _timestep=temp;
-                        }
-                        else RAVELOG_WARN("Timestep %f out of range, ignoring\n",_timestep);
-                    }
-                    else if ( cmd2 == "softstart" ) {
-                        //NOTE: This setting does not do anything yet
-                        _softstart=temp;
-                        RAVELOG_WARN("Softstart is not currently implemented...\n");
-                    }
+                    //NOTE: This setting does not do anything yet
+                    _softstart=temp;
+                    RAVELOG_WARN("Softstart is not currently implemented...\n");
+                }
+                else if ( cmd2 == "forward" )  _forward=true;
+                else if ( cmd2 == "reverse" )  _forward=false;
+                else if ( cmd2 == "record_on" || cmd2 == "record_off") {
+                    stringstream is2;
+                    //Pass stream through to servocontroller directly
+
+                    is2 << cmd2 << " " << is.rdbuf();
+                    return _pservocontroller->SendCommand(os,is2);  
+                }
+                else if ( cmd2 == "gains") {
+                    stringstream is2;
+                    //Pass stream through to servocontroller directly
+                    is2 << "set" << cmd2 << " " << is.rdbuf();
+                    return _pservocontroller->SendCommand(os,is2);  
                 }
             }
-            else if ( cmd == "run" ) {
+            return true;
+        }
+
+        bool DeserializeTrajectory(std::ostream& os, std::istream& is){
+            RAVELOG_ERROR("Not Implemented yet");
+            return false;
+        }
+
+
+        bool StartController(std::ostream& os, std::istream& is){
+            if ( !!_traj) {
                 _running=true;
                 return true;
-            } 
-            else if ( cmd == "pause" ) {
-                _running=false;
-                return true;
-            } 
-            else if ( cmd == "stop" ) {
-                //TODO: Differentiate these somehow?
-                _running=false;
-                return true;
-            } 
-            else if ( cmd == "reverse" ) {
-                _forward=false;
-                return true;
-            } 
-            else if ( cmd == "forward" ) {
-                _forward=true;
-                return true;
-            } 
-            else if ( cmd == "record_on" || cmd == "record_off") {
-                stringstream is2;
-                //Pass stream through to servocontroller directly
-
-                is2 << cmd << is.rdbuf();
-                _pservocontroller->SendCommand(os,is2);  
             }
+            return false;
+        } 
+
+        bool StopController(std::ostream& os, std::istream& is){
+            //TODO: Address thread safety? probably not significant here.
+            _running=false;
+            //TODO: Differentiate stop and pause in the future
+            return true;
+        } 
+
+        bool PauseController(std::ostream& os, std::istream& is){
+            _running=false;
             return true;
         }
 
