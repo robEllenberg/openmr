@@ -169,8 +169,8 @@ class TrajectoryController : public ControllerBase
         }
 
         bool DeserializeTrajectory(std::ostream& os, std::istream& is){
-            TrajectoryBasePtr temp;
-            return SetPath(boost::static_pointer_cast<TrajectoryBase>(temp->deserialize(is)));
+            RAVELOG_ERROR("Not Implemented yet");
+            return false;
         }
 
 
