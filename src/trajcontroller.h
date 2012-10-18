@@ -44,7 +44,7 @@ class TrajectoryController : public ControllerBase
 
             _ref_pos.resize(_probot->GetDOF());
             //Assume Affine DOF + time index gives 8 additional datapoints
-            _pose.resize(_probot->GetDOF()+7+1);
+            //_pose.resize(_probot->GetDOF()+7+1);
             //TODO: deal with derivative groups properly
 
             RAVELOG_DEBUG("Trajectory Controller initialized\n");
@@ -217,6 +217,28 @@ class TrajectoryController : public ControllerBase
                 _spec.ExtractDeltaTime(dt,_itdata);
                 _runtime+=dt;
             }
+            RAVELOG_DEBUG("Runtime is %f",_runtime);
+
+            //Extract DOF's used
+            ConfigurationSpecification::Group jointvals=_spec.GetGroupFromName("joint_values");
+            stringstream data;
+            data << jointvals.name;
+            RAVELOG_DEBUG(jointvals.name);
+            RAVELOG_DEBUG("\n");
+            //TODO: please 
+            string name,type;
+            data >> type >> name;
+            
+            //Resize pose and index vectors to the new trajectory
+
+            _pose.resize(jointvals.dof*3);
+            _trajindices.resize(jointvals.dof);
+            _activejointvalues.resize(jointvals.dof);
+            
+            //Read out the joint
+            FOREACH(it,_trajindices){
+                data >> *it;
+            }
 
             if (_runtime>0 && _traj->GetNumWaypoints()>0)
                 return true;
@@ -236,19 +258,25 @@ class TrajectoryController : public ControllerBase
         //-- Calculate the reference position and send to the servos
         void SetRefPos() 
         { 
-            //TODO: use config specs to optionally control only a subset of the joints?
-            // Sample a trajectory step and assign it to the current pose
             _traj->Sample(_pose,_time);
+            //RAVELOG_DEBUG("Sample for time %f at index %d is %f\n",_time,22,_pose[22]);
 
             _itdata=_pose.begin();
-            _itref=_ref_pos.begin();
+            _itref=_activejointvalues.begin();
 
             //Extract all joint values from the current pose and store as the new reference
+            //Note that not all DOF need to be specified in the trajectory here.
             _spec.ExtractJointValues(_itref,_itdata,_probot,_dofindices);
             //RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
             //RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
 
             //-- Set the new servos reference positions
+            size_t dof=0;
+            FOREACH(it, _trajindices){
+                //Update only controlled DOF
+                _ref_pos[*it]=_activejointvalues[dof++];
+            }
+
             _pservocontroller->SetDesired(_ref_pos);
         }
 
@@ -280,6 +308,8 @@ class TrajectoryController : public ControllerBase
 
         TrajectoryBaseConstPtr _traj; //Loaded trajectory from input command
         std::vector<dReal> _pose; // complete current timeslice of a loaded trajectory
+        std::vector<dReal> _activejointvalues; // Set of joint values of trajectory active dof
+        std::vector<size_t> _trajindices; // Set of joint values of trajectory active dof
         ConfigurationSpecification _spec; //COnfiguration spec for the trajectgory (not sure we need this)
         std::vector<dReal>::iterator _itdata; //Iterator for ConfigurationSpecification to extract data with.
         std::vector<dReal>::iterator _itref; //Iterator for ConfigurationSpecification to extract data with.
