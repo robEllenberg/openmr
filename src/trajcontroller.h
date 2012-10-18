@@ -230,8 +230,9 @@ class TrajectoryController : public ControllerBase
             data >> type >> name;
             
             //Resize pose and index vectors to the new trajectory
-
-            _pose.resize(jointvals.dof*2+1);
+            //make _pose the largest reasonable sample size until we can figure
+            //out how to size it based ont he config spec.
+            _pose.resize(_probot->GetDOF()*3+7+1);
             _trajindices.resize(jointvals.dof);
             _activejointvalues.resize(jointvals.dof);
             
@@ -276,12 +277,12 @@ class TrajectoryController : public ControllerBase
                 //Update only controlled DOF
                 _ref_pos[*it]=_activejointvalues[dof++];
             }
-            if (_time<.02){
-                FOREACH(itsample,_activejointvalues)
-                {
-                    RAVELOG_DEBUG("REF at %f is %f\n",_time,*itsample);
-                }
-            }
+            //if (_time<.02){
+                //FOREACH(itsample,_activejointvalues)
+                //{
+                    //RAVELOG_DEBUG("REF at %f is %f\n",_time,*itsample);
+                //}
+            //}
 
             _pservocontroller->SetDesired(_ref_pos);
         }
