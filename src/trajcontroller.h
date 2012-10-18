@@ -231,13 +231,14 @@ class TrajectoryController : public ControllerBase
             
             //Resize pose and index vectors to the new trajectory
 
-            _pose.resize(jointvals.dof*3);
+            _pose.resize(jointvals.dof*2+1);
             _trajindices.resize(jointvals.dof);
             _activejointvalues.resize(jointvals.dof);
             
             //Read out the joint
             FOREACH(it,_trajindices){
                 data >> *it;
+                RAVELOG_DEBUG("DOF Index: %d\n",*it);
             }
 
             if (_runtime>0 && _traj->GetNumWaypoints()>0)
@@ -259,14 +260,13 @@ class TrajectoryController : public ControllerBase
         void SetRefPos() 
         { 
             _traj->Sample(_pose,_time);
-            //RAVELOG_DEBUG("Sample for time %f at index %d is %f\n",_time,22,_pose[22]);
 
             _itdata=_pose.begin();
             _itref=_activejointvalues.begin();
 
             //Extract all joint values from the current pose and store as the new reference
             //Note that not all DOF need to be specified in the trajectory here.
-            _spec.ExtractJointValues(_itref,_itdata,_probot,_dofindices);
+            _spec.ExtractJointValues(_itref,_itdata,_probot,_trajindices);
             //RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
             //RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
 
@@ -275,6 +275,12 @@ class TrajectoryController : public ControllerBase
             FOREACH(it, _trajindices){
                 //Update only controlled DOF
                 _ref_pos[*it]=_activejointvalues[dof++];
+            }
+            if (_time<.02){
+                FOREACH(itsample,_activejointvalues)
+                {
+                    RAVELOG_DEBUG("REF at %f is %f\n",_time,*itsample);
+                }
             }
 
             _pservocontroller->SetDesired(_ref_pos);
@@ -309,7 +315,7 @@ class TrajectoryController : public ControllerBase
         TrajectoryBaseConstPtr _traj; //Loaded trajectory from input command
         std::vector<dReal> _pose; // complete current timeslice of a loaded trajectory
         std::vector<dReal> _activejointvalues; // Set of joint values of trajectory active dof
-        std::vector<size_t> _trajindices; // Set of joint values of trajectory active dof
+        std::vector<int> _trajindices; // Set of joint values of trajectory active dof
         ConfigurationSpecification _spec; //COnfiguration spec for the trajectgory (not sure we need this)
         std::vector<dReal>::iterator _itdata; //Iterator for ConfigurationSpecification to extract data with.
         std::vector<dReal>::iterator _itref; //Iterator for ConfigurationSpecification to extract data with.
