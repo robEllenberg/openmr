@@ -81,6 +81,10 @@ class TrajectoryController : public ControllerBase
         virtual int IsControlTransformation() const { return _nControlTransformation; }
         virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
         { 
+            size_t dof=0;
+            FOREACH(it,values){
+                _ref_pos[dof++]=*it;
+            }
             return _pservocontroller->SetDesired(values,trans); 
         }
 
@@ -225,7 +229,7 @@ class TrajectoryController : public ControllerBase
             data << jointvals.name;
             RAVELOG_DEBUG(jointvals.name);
             RAVELOG_DEBUG("\n");
-            //TODO: please 
+            //TODO: mutexes here?
             string name,type;
             data >> type >> name;
             
@@ -268,10 +272,7 @@ class TrajectoryController : public ControllerBase
             //Extract all joint values from the current pose and store as the new reference
             //Note that not all DOF need to be specified in the trajectory here.
             _spec.ExtractJointValues(_itref,_itdata,_probot,_trajindices);
-            //RAVELOG_DEBUG("Setting Ref, sample time is %f\n",_time);
-            //RAVELOG_DEBUG("Reference position %d is %f\n",7,_ref_pos[7]);
 
-            //-- Set the new servos reference positions
             size_t dof=0;
             FOREACH(it, _trajindices){
                 //Update only controlled DOF
