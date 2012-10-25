@@ -66,8 +66,8 @@ class TrajectoryController : public ControllerBase
 
             _time=0.0;
             _runtime=0.0;
-            //NOTE: Smart pointers should demalloc when appropriate here
             _traj.reset();
+            //NOTE: Smart pointers should demalloc when appropriate here
             boost::static_pointer_cast<ServoController>(_pservocontroller)->SetRadians();
 
             for (int i=0; i<_probot->GetDOF(); i++) {
@@ -82,8 +82,14 @@ class TrajectoryController : public ControllerBase
         virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
         { 
             size_t dof=0;
-            FOREACH(it,values){
-                _ref_pos[dof++]=*it;
+            if (values.size()<_ref_pos.size()){
+                RAVELOG_ERROR("Insufficient # of values provided\n");
+                return false;
+            }
+
+            FOREACH(it,_dofindices){
+                //TODO: check for bad references here
+                _ref_pos[*it]=values[*it];
             }
             return _pservocontroller->SetDesired(values,trans); 
         }
@@ -95,7 +101,6 @@ class TrajectoryController : public ControllerBase
             if ( !!ptraj){
                 Reset(0);
                 _traj = ptraj;
-                _spec = ptraj->GetConfigurationSpecification(); //Redundant?
                 return SetupTrajectory();
             }
             RAVELOG_WARN("No trajectory provided, ignoring...\n");
@@ -141,7 +146,7 @@ class TrajectoryController : public ControllerBase
             while (is){
                 is >> cmd2;
                 if ( cmd2 == "timestep") {
-                is >> temp;
+                    is >> temp;
                     if (temp > 0) {
                         _timestep=temp;
                     }
@@ -173,21 +178,30 @@ class TrajectoryController : public ControllerBase
         }
 
         bool DeserializeTrajectory(std::ostream& os, std::istream& is){
-            RAVELOG_ERROR("Not Implemented yet");
-            return false;
-        }
 
+            Reset(0);
+
+            TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(), "");
+
+            ptraj->deserialize(is);
+
+            _traj=ptraj;
+            return SetupTrajectory();
+        }
 
         bool StartController(std::ostream& os, std::istream& is){
             if ( !!_traj) {
+                RAVELOG_DEBUG("Starting trajectorycontroller at sim time %f...\n",_probot->GetEnv()->GetSimulationTime());
                 _running=true;
                 return true;
             }
+            RAVELOG_WARN("Trajectory not defined, ignoring...\n");
             return false;
         } 
 
         bool StopController(std::ostream& os, std::istream& is){
             //TODO: Address thread safety? probably not significant here.
+            RAVELOG_DEBUG("Stopping trajectorycontroller at local time %f...\n",_time);
             _running=false;
             //TODO: Differentiate stop and pause in the future
             return true;
@@ -214,6 +228,7 @@ class TrajectoryController : public ControllerBase
             std::vector<dReal> waypoint;
             dReal dt=0;
             //TODO: add initial pose as softstart here.
+            _spec = _traj->GetConfigurationSpecification(); //Redundant?
             //KLUDGE: Extract total runtime so we know when sampling is complete.
             for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
                 _traj->GetWaypoint(i,waypoint);
@@ -232,14 +247,14 @@ class TrajectoryController : public ControllerBase
             //TODO: mutexes here?
             string name,type;
             data >> type >> name;
-            
+
             //Resize pose and index vectors to the new trajectory
             //make _pose the largest reasonable sample size until we can figure
-            //out how to size it based ont he config spec.
+            //out how to size it based on the config spec.
             _pose.resize(_probot->GetDOF()*3+7+1);
             _trajindices.resize(jointvals.dof);
             _activejointvalues.resize(jointvals.dof);
-            
+
             //Read out the joint
             FOREACH(it,_trajindices){
                 data >> *it;
@@ -247,7 +262,10 @@ class TrajectoryController : public ControllerBase
             }
 
             if (_runtime>0 && _traj->GetNumWaypoints()>0)
+            {
+                RAVELOG_DEBUG("Found %d waypoints, runtime is %f.\n",_traj->GetNumWaypoints(),_runtime);
                 return true;
+            }
             else {
                 RAVELOG_ERROR("Trajectory not usable, aborting...\n");
                 Reset(0);
@@ -279,10 +297,10 @@ class TrajectoryController : public ControllerBase
                 _ref_pos[*it]=_activejointvalues[dof++];
             }
             //if (_time<.02){
-                //FOREACH(itsample,_activejointvalues)
-                //{
-                    //RAVELOG_DEBUG("REF at %f is %f\n",_time,*itsample);
-                //}
+            //FOREACH(itsample,_activejointvalues)
+            //{
+            //RAVELOG_DEBUG("REF at %f is %f\n",_time,*itsample);
+            //}
             //}
 
             _pservocontroller->SetDesired(_ref_pos);

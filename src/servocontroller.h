@@ -168,7 +168,7 @@ class ServoController : public ControllerBase
             //TODO: Why would this happen? should this be a more graceful failure?
             assert(fTimeElapsed > 0.0);
 
-            size_t dof=_probot->GetDOF();
+            const size_t dof=_probot->GetDOF();
             std::vector<dReal> angles(dof);
             std::vector<dReal> lasterror(dof);
             std::vector<dReal> cmdvelocities(dof);
@@ -436,7 +436,6 @@ class ServoController : public ControllerBase
 
         virtual RobotBasePtr GetRobot() const { return _probot; }
 
-
     private:
 
         /**
@@ -521,7 +520,6 @@ class ServoController : public ControllerBase
         /** Filter constants for integrator and differentiator */
         dReal _Kf;                    // -- "Forgetting" constant of integrator
         dReal _Ka;                    // -- first order filter for derivative
-
 
         /** Unit system flag (radians vs degrees) */
         dReal _inradians;
