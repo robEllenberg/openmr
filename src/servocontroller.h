@@ -46,7 +46,7 @@ class ServoController : public ControllerBase
                 "Format: record_on . Start recording the servo positions and references to memory");
         RegisterCommand("record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
-        RegisterCommand("print",boost::bind(&ServoController::PrintProperties,this,_1,_2),
+        RegisterCommand("print",boost::bind(&ServoController::GetProperties,this,_1,_2),
                 "Return controller properties as string.");
 
     }
@@ -109,9 +109,6 @@ class ServoController : public ControllerBase
                 _errSum[i]=0.0;
                 _dError[i]=0.0;
                 _parsed_pos[i]=0.0;
-                _KP[i]=8.3;
-                _KI[i]=0.0;
-                _KD[i]=0.0;
             }
 
             //-- Default value of the Proportional controller KP constant from old OpenMR
@@ -201,10 +198,7 @@ class ServoController : public ControllerBase
                 else satcmd=rawcmd;
                 cmdvelocities[i]=satcmd;
 
-
                 //TODO: windup protection, integral saturation, derivative filtering and saturation
-
-                //-- Store the current sample (only in recording mode)
 
                 // Update error history with new scratch value
                 _error[i] = error-(rawcmd-satcmd)*fTimeElapsed/_KP[i];
@@ -249,13 +243,17 @@ class ServoController : public ControllerBase
                 //Note: old gain-setting interface
                 if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
-                    is2 << "set" << cmd2 << " " << is.rdbuf();
-                    return SetGains(os,is2);  
+                    return SetGains(os,is);  
                 }
                 else if (cmd2 == "gainvec" || cmd2 == "gainvector")
                 {
                     is2 <<  is.rdbuf();
                     return SetIndividualGains(os,is2);
+                }
+                else if (cmd2 == "filter")
+                {
+                    getFromStream(is,_Kf,0,1,"Integrator Decay Constant");
+                    getFromStream(is,_Kf,0,1,"Derivative Filter Constant");
                 }
                 else if (cmd2 == "radians" || cmd2 == "radian") _inradians=true;
                 else if (cmd2 == "degrees" || cmd2 == "degree") _inradians=false;
@@ -385,6 +383,7 @@ class ServoController : public ControllerBase
             //TODO: Assign filter coefs
             return true;
         }
+
         /**
          * Get positions of all servos in current units.
          * Based on the unit system, return a serialized list of all servo
@@ -419,11 +418,12 @@ class ServoController : public ControllerBase
             return true;
         }
 
-        bool PrintProperties(std::ostream& os, std::istream& is)
+        bool GetProperties(std::ostream& os, std::istream& is)
         {
             FOREACH(it,_dofindices)
             {
-                os << "Gains, joint " << *it <<": " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << "\n";
+                os << "Gains, joint " << _probot->GetJointFromDOFIndex(*it)->GetName() <<
+                    " (" << *it <<"): " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << "\n";
             }
             os << "Filter Gains: "  << _Kf << " " << _Ka << "\n";
             os << "Units: " << (_inradians ? "radians" : "degrees") << "\n";
