@@ -12,8 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_MODULAR_ROBOTS_CONTROLLERS_H
-#define OPENRAVE_MODULAR_ROBOTS_CONTROLLERS_H
+#ifndef OPENRAVE_SERVOCONTROLLER_H
+#define OPENRAVE_SERVOCONTROLLER_H
 
 #include <math.h>
 #include <fstream>
