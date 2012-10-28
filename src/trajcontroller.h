@@ -12,8 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef TRAJECTORY_CONTROLLER_H
-#define TRAJECTORY_CONTROLLER_H
+#ifndef OPENRAVE_TRAJECTORY_CONTROLLER_H
+#define OPENRAVE_TRAJECTORY_CONTROLLER_H
 
 #include <math.h>
 
@@ -81,7 +81,6 @@ class TrajectoryController : public ControllerBase
         virtual int IsControlTransformation() const { return _nControlTransformation; }
         virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
         { 
-            size_t dof=0;
             if (values.size()<_ref_pos.size()){
                 RAVELOG_ERROR("Insufficient # of values provided\n");
                 return false;
@@ -142,7 +141,6 @@ class TrajectoryController : public ControllerBase
         {
             dReal temp;
             string cmd2;
-            bool flag;
             while (is){
                 is >> cmd2;
                 if ( cmd2 == "timestep") {
@@ -160,14 +158,8 @@ class TrajectoryController : public ControllerBase
                 }
                 else if ( cmd2 == "forward" )  _forward=true;
                 else if ( cmd2 == "reverse" )  _forward=false;
-                else if ( cmd2 == "record_on" || cmd2 == "record_off") {
-                    stringstream is2;
-                    //Pass stream through to servocontroller directly
-
-                    is2 << cmd2 << " " << is.rdbuf();
-                    return _pservocontroller->SendCommand(os,is2);  
-                }
-                else if ( cmd2 == "gains") {
+                //Pass any other commands through to the servocontroller
+                else {
                     stringstream is2;
                     //Pass stream through to servocontroller directly
                     is2 << "set" << cmd2 << " " << is.rdbuf();

@@ -12,8 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#ifndef OPENRAVE_MODULAR_ROBOTS_CONTROLLERS_H
-#define OPENRAVE_MODULAR_ROBOTS_CONTROLLERS_H
+#ifndef OPENRAVE_SERVOCONTROLLER_H
+#define OPENRAVE_SERVOCONTROLLER_H
 
 #include <math.h>
 #include <fstream>
@@ -46,7 +46,7 @@ class ServoController : public ControllerBase
                 "Format: record_on . Start recording the servo positions and references to memory");
         RegisterCommand("record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
-        RegisterCommand("print",boost::bind(&ServoController::PrintProperties,this,_1,_2),
+        RegisterCommand("print",boost::bind(&ServoController::GetProperties,this,_1,_2),
                 "Return controller properties as string.");
 
     }
@@ -96,6 +96,10 @@ class ServoController : public ControllerBase
             _error.resize(_probot->GetDOF());
             _errSum.resize(_probot->GetDOF());
             _dError.resize(_probot->GetDOF());
+            fillVector(_KP,8.3,_probot->GetDOF());
+            fillVector(_KI,0,_probot->GetDOF());
+            fillVector(_KD,0,_probot->GetDOF());
+
             std::vector<dReal> angle;
             for (size_t i=0; i<_joints.size(); i++) {
                 //TODO: Use iterators?
@@ -109,9 +113,6 @@ class ServoController : public ControllerBase
 
             //-- Default value of the Proportional controller KP constant from old OpenMR
             // This should be backwards compatible with old code
-            _KP=8.3;
-            _KD=0;
-            _KI=0;
             _Kf=.9998;
             _Ka=.1;
             _limitpad=.03;
@@ -188,7 +189,7 @@ class ServoController : public ControllerBase
                 // Calculate decaying integration
                 _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
 
-                rawcmd = error*_KP + derror*_KD +  _errSum[i]*_KI; 
+                rawcmd = error*_KP[i] + derror*_KD[i] +  _errSum[i]*_KI[i]; 
 
                 //-- Limit the cmdvelocities to its maximum
                 maxvel = _joints[i]->GetMaxVel();
@@ -197,13 +198,10 @@ class ServoController : public ControllerBase
                 else satcmd=rawcmd;
                 cmdvelocities[i]=satcmd;
 
-
                 //TODO: windup protection, integral saturation, derivative filtering and saturation
 
-                //-- Store the current sample (only in recording mode)
-
                 // Update error history with new scratch value
-                _error[i] = error-(rawcmd-satcmd)*fTimeElapsed/_KP;
+                _error[i] = error-(rawcmd-satcmd)*fTimeElapsed/_KP[i];
                 _dError[i] = derror;
 
             }
@@ -236,16 +234,24 @@ class ServoController : public ControllerBase
          */
         bool SetProperties(std::ostream& os, std::istream& is)
         {
-            dReal temp;
             string cmd2;
-            bool flag;
             stringstream is2;
             while (is){
                 is >> cmd2;
+                //Note: old gain-setting interface
                 if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
-                    is2 << "set" << cmd2 << " " << is.rdbuf();
-                    return SetGains(os,is2);  
+                    return SetGains(os,is);  
+                }
+                else if (cmd2 == "gainvec" || cmd2 == "gainvector")
+                {
+                    is2 <<  is.rdbuf();
+                    return SetIndividualGains(os,is2);
+                }
+                else if (cmd2 == "filter")
+                {
+                    getFromStream(is,_Kf,0,1,"Integrator Decay Constant");
+                    getFromStream(is,_Kf,0,1,"Derivative Filter Constant");
                 }
                 else if (cmd2 == "radians" || cmd2 == "radian") _inradians=true;
                 else if (cmd2 == "degrees" || cmd2 == "degree") _inradians=false;
@@ -284,7 +290,7 @@ class ServoController : public ControllerBase
             is >> pos;
 
             return SetServoReference(servo,pos);
-                //RAVELOG_DEBUG("Limits %f,%f, Input %f, Servo %d Position: %f\n",lower[0],upper[0],pos, servo,_ref_pos[servo]);
+            //RAVELOG_DEBUG("Limits %f,%f, Input %f, Servo %d Position: %f\n",lower[0],upper[0],pos, servo,_ref_pos[servo]);
         }
 
         /** Common function to set a single servo reference */
@@ -305,25 +311,76 @@ class ServoController : public ControllerBase
         }
 
         /**
-         * Set controller gains.
+         * Set controller gains individually.
          * Set PID and filter gains from input string.
-         * "Kp Ki Kd Kf Ka"
+         * "set gainvec joint# kp ki kd joint# kp ki kd
          * Note that invalid or omitted values will be ignored and issue a warning.
+         */
+        bool SetIndividualGains(std::ostream& os, std::istream& is)
+        {
+
+            int curjoint=-1;
+            dReal kp=-1.0,kd=-1.0,ki=-1.0;
+            string name;
+
+            while (!!is)
+            {
+                //Kuldgy packet structure
+                is >> curjoint;
+                is >> kp;
+                is >> ki;
+                is >> kd;
+            
+                if (curjoint < 0 || curjoint > _probot->GetDOF())
+                    return false;
+                else if (curjoint == _probot->GetDOF())
+                {
+                    RAVELOG_DEBUG("Setting all joint gains...\n");
+                    for (size_t i = 0; i < (size_t)_probot->GetDOF();++i)
+                    {
+                        //Assign all joints instead of just one
+                        if ( kp>=0.0) _KP[i]=kp;
+                        if ( ki>=0.0) _KI[i]=ki;
+                        if ( kd>=0.0) _KD[i]=kd;
+                    }
+                }
+                else{
+                    if ( kp>=0.0) _KP[curjoint]=kp;
+                    if ( ki>=0.0) _KI[curjoint]=ki;
+                    if ( kd>=0.0) _KD[curjoint]=kd;
+                }
+            }
+            return true;
+        }
+
+
+        /**
+         * Set gains collectively (backwards compatible).
          */
         bool SetGains(std::ostream& os, std::istream& is)
         {
 
             // Since we may only want to set a few gains, don't freak out if the last few are not specified
-            getFromStream(is,_KP,0.0,10000.0,"Porportional Gain Kp");
-            getFromStream(is,_KI,0.0,10000.0,"Integral Gain Ki");
-            getFromStream(is,_KD,0.0,10000.0,"Derivative Gain Kd");
-            getFromStream(is,_Kf,0.0,1.0,"Integrator Decay Kf");
-            getFromStream(is,_Ka,0.0,1.0,"Differentiator Decay Ka");
 
-            //This function doesn't "fail" exactly, so return true for now... 
+            dReal kp=-1.0;
+            dReal ki=-1.0;
+            dReal kd=-1.0;
+            string name;
+
+            is >> kp;
+            is >> ki;
+            is >> kd;
+            RAVELOG_DEBUG("Received gains Kp=%f,Ki=%f,Kd=%f\n",kp,ki,kd);
+            for (size_t i = 0; i < (size_t)_probot->GetDOF();++i)
+            {
+                //Assign all joints instead of just one
+                if ( kp>=0) _KP[i]=kp;
+                if ( ki>=0) _KI[i]=ki;
+                if ( kd>=0) _KD[i]=kd;
+            }
+            //TODO: Assign filter coefs
             return true;
         }
-
 
         /**
          * Get positions of all servos in current units.
@@ -359,9 +416,14 @@ class ServoController : public ControllerBase
             return true;
         }
 
-        bool PrintProperties(std::ostream& os, std::istream& is)
+        bool GetProperties(std::ostream& os, std::istream& is)
         {
-            os << "Gains: " << _KP << " " << _KI << " " << _KD << " " << _Kf << " " << _Ka << "\n";
+            FOREACH(it,_dofindices)
+            {
+                os << "Gains, joint " << _probot->GetJointFromDOFIndex(*it)->GetName() <<
+                    " (" << *it <<"): " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << "\n";
+            }
+            os << "Filter Gains: "  << _Kf << " " << _Ka << "\n";
             os << "Units: " << (_inradians ? "radians" : "degrees") << "\n";
             return true;
         }
@@ -437,13 +499,29 @@ class ServoController : public ControllerBase
         virtual RobotBasePtr GetRobot() const { return _probot; }
 
     private:
+        void fillVector(std::vector<dReal>& vec,dReal val,size_t len)
+        {
+            vec.resize(len);
+            FOREACH(it, vec){
+                *it=val;
+            }
+        }
+
+        void writeGains()
+        {
+            FOREACH(it,_dofindices)
+            {
+                outFile << "Joint " << *it <<": " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << " ";
+            }
+            outFile << " Filter Gains: "  << _Kf << " " << _Ka << "\n";
+        }
 
         /**
          * Get a value from a string stream.
          * This function adds a few checks to the process of extracting input values, such as validity and bounds checking.
          * Obviously this slows things down a little, so it probably shouldn't be used for realtime functions.
          */
-        bool getFromStream(std::istream& is, dReal &K, const dReal& min, const dReal& max, char name[])
+        bool getFromStream(std::istream& is, dReal &K, const dReal& min, const dReal& max, const char name[])
         {
             dReal k;
             if (is >> k) {
@@ -478,7 +556,7 @@ class ServoController : public ControllerBase
             stopDOF++;
             // Servo properties (gains)
 
-            outFile << "Kp " << _KP << " Ki " << _KI << " Kd " << _KD << " Kf " << _Kf << " Ka " << _Ka << endl ;
+            writeGains();
 
             //-- Servos angle
             for (size_t s=startDOF; s<stopDOF; s++) {
@@ -512,10 +590,10 @@ class ServoController : public ControllerBase
         std::vector<dReal> _dError;   // Tracking error rate
         std::vector<dReal> _errSum;   // tracking error sum (decaying)
 
-        /** Controller gains */
-        dReal _KP;                    
-        dReal _KI;
-        dReal _KD;
+        /** Controller gain vectors */
+        std::vector<dReal> _KP;                    
+        std::vector<dReal> _KI;
+        std::vector<dReal> _KD;
 
         /** Filter constants for integrator and differentiator */
         dReal _Kf;                    // -- "Forgetting" constant of integrator
