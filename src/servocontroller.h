@@ -234,9 +234,7 @@ class ServoController : public ControllerBase
          */
         bool SetProperties(std::ostream& os, std::istream& is)
         {
-            dReal temp;
             string cmd2;
-            bool flag;
             stringstream is2;
             while (is){
                 is >> cmd2;
@@ -338,18 +336,18 @@ class ServoController : public ControllerBase
                 else if (curjoint == _probot->GetDOF())
                 {
                     RAVELOG_DEBUG("Setting all joint gains...\n");
-                    for (size_t i = 0; i < _probot->GetDOF();++i)
+                    for (size_t i = 0; i < (size_t)_probot->GetDOF();++i)
                     {
                         //Assign all joints instead of just one
-                        if ( kp>=0) _KP[i]=kp;
-                        if ( ki>=0) _KI[i]=ki;
-                        if ( kd>=0) _KD[i]=kd;
+                        if ( kp>=0.0) _KP[i]=kp;
+                        if ( ki>=0.0) _KI[i]=ki;
+                        if ( kd>=0.0) _KD[i]=kd;
                     }
                 }
                 else{
-                    if ( kp>=0) _KP[curjoint]=kp;
-                    if ( ki>=0) _KI[curjoint]=ki;
-                    if ( kd>=0) _KD[curjoint]=kd;
+                    if ( kp>=0.0) _KP[curjoint]=kp;
+                    if ( ki>=0.0) _KI[curjoint]=ki;
+                    if ( kd>=0.0) _KD[curjoint]=kd;
                 }
             }
             return true;
@@ -373,7 +371,7 @@ class ServoController : public ControllerBase
             is >> ki;
             is >> kd;
             RAVELOG_DEBUG("Received gains Kp=%f,Ki=%f,Kd=%f\n",kp,ki,kd);
-            for (size_t i = 0; i < _probot->GetDOF();++i)
+            for (size_t i = 0; i < (size_t)_probot->GetDOF();++i)
             {
                 //Assign all joints instead of just one
                 if ( kp>=0) _KP[i]=kp;
@@ -523,7 +521,7 @@ class ServoController : public ControllerBase
          * This function adds a few checks to the process of extracting input values, such as validity and bounds checking.
          * Obviously this slows things down a little, so it probably shouldn't be used for realtime functions.
          */
-        bool getFromStream(std::istream& is, dReal &K, const dReal& min, const dReal& max, char name[])
+        bool getFromStream(std::istream& is, dReal &K, const dReal& min, const dReal& max, const char name[])
         {
             dReal k;
             if (is >> k) {

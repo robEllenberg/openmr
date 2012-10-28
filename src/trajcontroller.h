@@ -81,7 +81,6 @@ class TrajectoryController : public ControllerBase
         virtual int IsControlTransformation() const { return _nControlTransformation; }
         virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
         { 
-            size_t dof=0;
             if (values.size()<_ref_pos.size()){
                 RAVELOG_ERROR("Insufficient # of values provided\n");
                 return false;
@@ -142,7 +141,6 @@ class TrajectoryController : public ControllerBase
         {
             dReal temp;
             string cmd2;
-            bool flag;
             while (is){
                 is >> cmd2;
                 if ( cmd2 == "timestep") {

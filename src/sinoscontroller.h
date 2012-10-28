@@ -64,7 +64,7 @@ class SinosController : public ControllerBase
                 _offset[i]=0;
             }
             SetRefPos();
-            cout << "Reset!" << endl;
+            RAVELOG_INFO("Sinoscontroller Reset!\n");
         }
 
         virtual const std::vector<int>& GetControlDOFIndices() const { return _dofindices; }
@@ -182,19 +182,13 @@ class SinosController : public ControllerBase
         //-- Calculate the reference position and send to the servos
         void SetRefPos() 
         { 
-            stringstream os, is;
-            is << "setpos ";
 
             for (size_t i=0; i<_ref_pos.size(); i++) {
                 _ref_pos[i]=_amplitude[i]*sin(-(360.0*_n)/(float)_N *PI/180.0 + _phase0[i]*PI/180) + _offset[i];
-                is<<_ref_pos[i]<<" ";
             }
 
-            //-- Set the new servos reference positions
-            _pservocontroller->SendCommand(os,is);
+            _pservocontroller->SetDesired(_ref_pos);
 
-            //-- Debug
-            //cout << "n=" << _n << " Ref0: " << _ref_pos[0] << " Ref1: " << _ref_pos[1] << endl;
         }
 
     protected:
@@ -214,7 +208,6 @@ class SinosController : public ControllerBase
         std::vector<dReal> _amplitude; //-- Oscillation amplitudes
         std::vector<dReal> _phase0;    //-- Oscillation initial phase
         std::vector<dReal> _offset;    //-- Oscillation offset
-
 
 };
 
