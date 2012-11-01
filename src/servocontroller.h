@@ -27,7 +27,7 @@ class ServoController : public ControllerBase
         ServoController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
         //TODO: Add a way to set gains per joint to match physical behavior
-        __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov";
+        __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov, overhauled by Robert Ellenberg";
         RegisterCommand("test",boost::bind(&ServoController::Test,this,_1,_2),
                 "Command for testing and debugging");
         RegisterCommand("set",boost::bind(&ServoController::SetProperties,this,_1,_2),
