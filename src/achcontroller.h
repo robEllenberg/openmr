@@ -399,6 +399,12 @@ private:
         }
     }
 
+    void _SendACHReferences( vector<dReal> values)
+    {
+        //TODO: make sure to only change refs for _dofindices controlled
+        RAVELOG_DEBUG("Sending ACH command (eventually)...");
+    }
+
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
     {
         vector<dReal> prevvalues, curvalues, curvel;
@@ -415,7 +421,9 @@ private:
         _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,true);
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
+        //TODO: use this as safety for self-collisions
         _CheckConfiguration();
+        _SendACHReferences(curvalues); 
     }
     virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
     {
@@ -433,7 +441,9 @@ private:
         _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
         _CheckConfiguration();
+        _SendACHReferences(curvalues); 
     }
+
 
     void _CheckLimits(std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
     {
@@ -521,6 +531,9 @@ private:
     ConfigurationSpecification _samplespec;
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
+
+    Hubo::hubo_channels _ach;
+
 };
 
 ControllerBasePtr CreateACHController(EnvironmentBasePtr penv, std::istream& sinput)
