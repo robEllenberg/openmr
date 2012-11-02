@@ -408,7 +408,31 @@ private:
     void _SendACHReferences( vector<dReal> values)
     {
         //TODO: make sure to only change refs for _dofindices controlled
-        RAVELOG_DEBUG("Sending ACH command (eventually)...");
+
+        /* Get latest ACH message */
+        size_t fs;
+        ach_status_t r = ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
+
+        if(r != ACH_OK)
+            RAVELOG_DEBUG("Ref r = %s\n",ach_result_to_string(r));
+        else   assert( sizeof(H_ref) == fs ); 
+
+        r = ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+
+        if(r != ACH_OK)
+            RAVELOG_DEBUG("State r = %s\n",ach_result_to_string(r));
+        else   assert( sizeof(H_state) == fs ); 
+
+        //TODO: Populate structure with sampled joint angles
+        string name;
+
+        for (size_t i = 0;i<_dofindices.size();++i){
+            name=_probot->GetJointFromDOFIndex(i)->GetName();
+            H_ref.ref[Hubo::name2jmc[name]]=values.at(i);
+        }
+
+        ach_put( &(_ach.hubo_ref), &H_ref, sizeof(H_ref));
+
     }
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
@@ -539,9 +563,9 @@ private:
     boost::mutex _mutex;
 
     Hubo::hubo_channels _ach;
-    Hubo::hubo_ref H_ref;
-    Hubo::hubo_state H_state;
-    Hubo::hubo_param H_param;
+    hubo_ref H_ref;
+    hubo_state H_state;
+    hubo_param H_param;
 
 };
 

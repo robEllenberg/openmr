@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE RelWithDebInfo)
 find_package(OpenRAVE REQUIRED)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -std=gnu++0x")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread)
