@@ -84,6 +84,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _HUBO_ACH_NAMESPACE_
 #define _HUBO_ACH_NAMESPACE_
 
+
 namespace Hubo{
 
     struct timeb {
@@ -95,10 +96,10 @@ namespace Hubo{
 
     struct hubo_channels {
         // ach channels
-        ach_channel_t chan_hubo_ref;      // hubo-ach
-        ach_channel_t chan_hubo_init_cmd; // hubo-ach-console
-        ach_channel_t chan_hubo_state;    // hubo-ach-state
-        ach_channel_t chan_hubo_param;    // hubo-ach-param
+        ach_channel_t hubo_ref;      // hubo-ach
+        ach_channel_t hubo_init_cmd; // hubo-ach-console
+        ach_channel_t hubo_state;    // hubo-ach-state
+        ach_channel_t hubo_param;    // hubo-ach-param
     };
 
     void stack_prefault(void) {
@@ -140,16 +141,36 @@ namespace Hubo{
         /* Pre-fault our stack */
         stack_prefault();
 
-        /* open ach channel */
-        int r = ach_open(&chan.chan_hubo_ref, HUBO_CHAN_REF_NAME , NULL);
+        /* open ach channels */
+        int r = ach_open(&chan.hubo_ref, HUBO_CHAN_REF_NAME , NULL);
         assert( ACH_OK == r );
 
-        r = ach_open(&chan.chan_hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
+        r = ach_open(&chan.hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
         assert( ACH_OK == r );
 
-        r = ach_open(&chan.chan_hubo_state, HUBO_CHAN_STATE_NAME , NULL);
+        r = ach_open(&chan.hubo_state, HUBO_CHAN_STATE_NAME , NULL);
         assert( ACH_OK == r );
         return chan;
     }
+
+    //Template function is kindof an ugly answer, but at least the compiler knows what's going on, unlike with a void pointer or something.
+    template <class T>
+    void setup_memory(T& contents, ach_channel_t &chan ){
+        //Allocate initial values for channel contents
+        memset( &contents,   0, sizeof(contents));
+
+        size_t fs;
+        ach_status_t r = ach_get( &chan, &contents, sizeof(contents), &fs, NULL, ACH_O_LAST );
+        if(ACH_OK != r) {
+            if(hubo_debug) {
+                //TODO: store a name in the channel?
+                printf("Channel initial r = %s\n",ach_result_to_string(r));}
+        }
+        else{   assert( sizeof(contents) == fs ); }
+
+    }
+
+
+
 }
 #endif

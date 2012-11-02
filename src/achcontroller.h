@@ -57,6 +57,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
+        Hubo::setup_memory<hubo_ref>(H_ref,_ach.hubo_ref);
+        Hubo::setup_memory<hubo_state>(H_state,_ach.hubo_state);
+        Hubo::setup_memory<hubo_param>(H_param,_ach.hubo_param);
     }
     virtual ~ACHController() {
     }
@@ -103,6 +106,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
         }
         _bPause = false;
+        //Setup ACH stuff here:
+
+
         return true;
     }
 
@@ -533,6 +539,9 @@ private:
     boost::mutex _mutex;
 
     Hubo::hubo_channels _ach;
+    Hubo::hubo_ref H_ref;
+    Hubo::hubo_state H_state;
+    Hubo::hubo_param H_param;
 
 };
 
