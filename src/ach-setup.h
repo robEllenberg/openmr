@@ -59,6 +59,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <inttypes.h>
 #include "ach.h"
+#include <openrave/openrave.h>
 
 /* At time of writing, these constants are not defined in the headers */
 #ifndef PF_CAN
@@ -118,24 +119,28 @@ namespace Hubo{
         }
     };
 
-    hubo_channels setup_channels(){
-        /* RT */
+    int64_t ts_diff(struct timespec *timeA_p, struct timespec *timeB_p)
+    {
+        return ((timeA_p->tv_sec * 1000000000) + timeA_p->tv_nsec) -
+            ((timeB_p->tv_sec * 1000000000) + timeB_p->tv_nsec);
+    };
+
+    hubo_channels setup_channels(bool rt_mode = false){
         struct sched_param param;
 
         hubo_channels chan;
-        /* Declare ourself as a real time task */
+        //[> Declare ourself as a real time task <]
         param.sched_priority = MY_PRIORITY;
         if(sched_setscheduler(0, SCHED_FIFO, &param) == -1) {
-            perror("sched_setscheduler failed");
-            //TODO Make these openrave exceptions / asserts?
-            exit(-1);
+            RAVELOG_WARN("sched_setscheduler failed\n");
+            if (rt_mode) exit(-1);
         }
 
-        /* Lock memory */
+        //[> Lock memory <]
         if(mlockall(MCL_CURRENT|MCL_FUTURE) == -1) {
-            perror("mlockall failed");
+            RAVELOG_WARN("mlockall failed\n");
             //TODO Make these openrave exceptions / asserts?
-            exit(-2);
+            if (rt_mode) exit(-2);
         }
 
         /* Pre-fault our stack */
@@ -155,22 +160,19 @@ namespace Hubo{
 
     //Template function is kindof an ugly answer, but at least the compiler knows what's going on, unlike with a void pointer or something.
     template <class T>
-    void setup_memory(T& contents, ach_channel_t &chan ){
-        //Allocate initial values for channel contents
-        memset( &contents,   0, sizeof(contents));
+        void setup_memory(T* data_ptr, ach_channel_t *chan_ptr ){
+            //Allocate initial values for channel data_ptr
+            memset( data_ptr,   0, sizeof(*data_ptr));
 
-        size_t fs;
-        ach_status_t r = ach_get( &chan, &contents, sizeof(contents), &fs, NULL, ACH_O_LAST );
-        if(ACH_OK != r) {
-            if(hubo_debug) {
-                //TODO: store a name in the channel?
-                printf("Channel initial r = %s\n",ach_result_to_string(r));}
+            RAVELOG_DEBUG("Used %d bytes\n",sizeof(*data_ptr));
+            size_t fs;
+            ach_status_t r = ach_get( chan_ptr, data_ptr, sizeof(*data_ptr), &fs, NULL, ACH_O_LAST );
+            if(ACH_OK != r) 
+                RAVELOG_DEBUG("Channel initial r = %s\n",ach_result_to_string(r));
+
+            else   assert( sizeof(data_ptr) == fs ); 
+
         }
-        else{   assert( sizeof(contents) == fs ); }
-
-    }
-
-
 
 }
 #endif

@@ -57,9 +57,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
-        Hubo::setup_memory<hubo_ref>(H_ref,_ach.hubo_ref);
-        Hubo::setup_memory<hubo_state>(H_state,_ach.hubo_state);
-        Hubo::setup_memory<hubo_param>(H_param,_ach.hubo_param);
     }
     virtual ~ACHController() {
     }
@@ -107,7 +104,11 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         }
         _bPause = false;
         //Setup ACH stuff here:
-
+        _ach=Hubo::setup_channels();
+        Hubo::setup_memory<hubo_ref>(&H_ref,&(_ach.hubo_ref));
+        Hubo::setup_memory<hubo_state>(&H_state,&(_ach.hubo_state));
+        Hubo::setup_memory<hubo_param>(&H_param,&(_ach.hubo_param));
+        clock_gettime(CLOCK_REALTIME,&_t);
 
         return true;
     }
@@ -414,13 +415,13 @@ private:
         ach_status_t r = ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
 
         if(r != ACH_OK)
-            RAVELOG_DEBUG("Ref r = %s\n",ach_result_to_string(r));
+            RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
         else   assert( sizeof(H_ref) == fs ); 
 
         r = ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
 
         if(r != ACH_OK)
-            RAVELOG_DEBUG("State r = %s\n",ach_result_to_string(r));
+            RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));
         else   assert( sizeof(H_state) == fs ); 
 
         //TODO: Populate structure with sampled joint angles
@@ -430,7 +431,9 @@ private:
             name=_probot->GetJointFromDOFIndex(i)->GetName();
             H_ref.ref[Hubo::name2jmc[name]]=values.at(i);
         }
-
+        struct timespec tnew;
+        clock_gettime( CLOCK_REALTIME, &tnew);
+        RAVELOG_DEBUG("%llu\n",Hubo::ts_diff(&tnew,&_t));
         ach_put( &(_ach.hubo_ref), &H_ref, sizeof(H_ref));
 
     }
@@ -563,10 +566,11 @@ private:
     boost::mutex _mutex;
 
     Hubo::hubo_channels _ach;
-    hubo_ref H_ref;
-    hubo_state H_state;
-    hubo_param H_param;
+    struct hubo_ref H_ref;
+    struct hubo_state H_state;
+    struct hubo_param H_param;
 
+    struct timespec _t;
 };
 
 ControllerBasePtr CreateACHController(EnvironmentBasePtr penv, std::istream& sinput)

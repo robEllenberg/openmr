@@ -1,10 +1,11 @@
 #include "hubo.h"
-
+#include <map>
+#include <string>
 //Add some useful C++ stuff to Dan's hubo.h
 
 namespace Hubo{
 
-    typedef std::map<string,unsigned int> JointMap;
+    typedef std::map<std::string,unsigned int> JointMap;
     JointMap name2jmc={
 
     /* Joint Numbers/Index values */

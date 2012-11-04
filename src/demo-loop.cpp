@@ -37,9 +37,9 @@ void huboLoop() {
     struct hubo_state H_state;
     struct hubo_param H_param;
     
-    setup_memory<hubo_ref>(H_ref,chan.hubo_ref);
-    setup_memory<hubo_state>(H_state,chan.hubo_ref);
-    setup_memory<hubo_param>(H_param,chan.hubo_ref);
+    setup_memory<hubo_ref>(&H_ref,&(chan.hubo_ref));
+    setup_memory<hubo_state>(&H_state,&(chan.hubo_state));
+    setup_memory<hubo_param>(&H_param,&(chan.hubo_param));
 
     /* Send a message to the CAN bus */
     struct can_frame frame;
