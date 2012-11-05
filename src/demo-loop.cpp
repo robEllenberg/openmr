@@ -41,31 +41,15 @@ void huboLoop() {
     setup_memory<hubo_state>(&H_state,&(chan.hubo_state));
     setup_memory<hubo_param>(&H_param,&(chan.hubo_param));
 
-    /* Send a message to the CAN bus */
-    struct can_frame frame;
-
     // time info
     struct timespec t;
-    //int interval = 500000000; // 2hz (0.5 sec)
     int interval = 10000000; // 100 hz (0.01 sec)
-    //int interval = 5000000; // 200 hz (0.005 sec)
-    //int interval = 2000000; // 500 hz (0.002 sec)
 
     // get current time
-    //clock_gettime( CLOCK_MONOTONIC,&t);
     clock_gettime( 0,&t);
-    struct timeb tp;
-    struct timeb tp_0;
-    struct timeb tp_f;
-    int a = 0;
-
-    double tt = 0.0;
     double f = 0.2;		// frequency
-    double T = (double)interval/1000000000.0;
     double A = 0.3;// 1.0;
     double dir = -1.0;
-    double t0 = 0.0;
-    double t1 = 0.0;
     int jnt = WST;
     ach_status_t r;
     size_t fs;
@@ -74,16 +58,16 @@ void huboLoop() {
         clock_nanosleep(0,TIMER_ABSTIME,&t, NULL);
 
         /* Get latest ACH message */
-        r = ach_get( &(chan.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
+        r = (ach_status_t)ach_get( &(chan.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
         if(ACH_OK != r) {
             if(hubo_debug) {
-                printf("Ref r = %s\n",ach_result_to_string(r));}
+                printf("Ref r = %s\n",ach_result_to_string((ach_status_t)r));}
         }
         else{   assert( sizeof(H_ref) == fs ); }
-        r = ach_get( &(chan.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+        r = (ach_status_t)ach_get( &(chan.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
         if(ACH_OK != r) {
             if(hubo_debug) {
-                printf("State r = %s\n",ach_result_to_string(r));}
+                printf("State r = %s\n",ach_result_to_string((ach_status_t)r));}
         }
         else{   assert( sizeof(H_state) == fs ); }
 
@@ -101,9 +85,6 @@ void huboLoop() {
 
 }
 int main(int argc, char **argv) {
-
-    int vflag = 0;
-    int c;
 
     int i = 1;
     while(argc > i) {

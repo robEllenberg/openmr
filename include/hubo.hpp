@@ -78,7 +78,7 @@ namespace Hubo{
         //TODO: Return constant pointer?
         DirectJointMapPtr pjointmap (new DirectJointMap());
         std::string name;
-        for (size_t i=0; i < probot->GetDOF(); ++i) {
+        for (int i=0; i < probot->GetDOF(); ++i) {
             name=probot->GetJointFromDOFIndex(i)->GetName();
             if (name2jmc.find(name) != name2jmc.end())
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc[name]));
@@ -106,34 +106,34 @@ namespace Hubo{
             }
             //FIXME: Not sure if the numbers match the digits correctly here
             else if (name == "leftIndexKnuckle1") {
-                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF1"]));
+                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF2"]));
             }
             else if (name == "leftMiddleKnuckle1") {
-                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF2"]));
+                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF3"]));
             }
             else if (name == "leftRingKnuckle1") {
-                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF3"]));
+                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF4"]));
             }
             else if (name == "leftPinkyKnuckle1") {
-                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF4"]));
+                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF5"]));
             }
             else if (name == "leftThumbKnuckle1") {
-                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF5"]));
-            }
-            else if (name == "rightIndexKnuckle1") {
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF1"]));
             }
-            else if (name == "rightMiddleKnuckle1") {
+            else if (name == "rightIndexKnuckle1") {
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF2"]));
             }
-            else if (name == "rightRingKnuckle1") {
+            else if (name == "rightMiddleKnuckle1") {
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF3"]));
             }
-            else if (name == "rightPinkyKnuckle1") {
+            else if (name == "rightRingKnuckle1") {
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF4"]));
             }
-            else if (name == "rightThumbKnuckle1") {
+            else if (name == "rightPinkyKnuckle1") {
                 pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF5"]));
+            }
+            else if (name == "rightThumbKnuckle1") {
+                pjointmap->insert(std::pair<unsigned int,unsigned int>(i,name2jmc["LF1"]));
             }
         }
         return pjointmap;

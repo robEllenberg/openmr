@@ -455,14 +455,14 @@ private:
         // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
         // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
         size_t fs;
-        ach_status_t r = ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
+        ach_status_t r = (ach_status_t) ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
         //TODO: Eliminate these log messages? 
         if(r != ACH_OK) {
             //RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
         }
         else   assert( sizeof(H_ref) == fs ); 
 
-        r = ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+        r = (ach_status_t) ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
 
         if(r != ACH_OK) {
             //RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));

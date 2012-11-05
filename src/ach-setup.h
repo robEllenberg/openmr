@@ -147,13 +147,13 @@ namespace Hubo{
         stack_prefault();
 
         /* open ach channels */
-        int r = ach_open(&chan.hubo_ref, HUBO_CHAN_REF_NAME , NULL);
+        ach_status_t r = (ach_status_t)ach_open(&chan.hubo_ref, HUBO_CHAN_REF_NAME , NULL);
         assert( ACH_OK == r );
 
-        r = ach_open(&chan.hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
+        r = (ach_status_t)ach_open(&chan.hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
         assert( ACH_OK == r );
 
-        r = ach_open(&chan.hubo_state, HUBO_CHAN_STATE_NAME , NULL);
+        r = (ach_status_t)ach_open(&chan.hubo_state, HUBO_CHAN_STATE_NAME , NULL);
         assert( ACH_OK == r );
         return chan;
     }
@@ -166,7 +166,8 @@ namespace Hubo{
 
             RAVELOG_DEBUG("Used %d bytes\n",sizeof(*data_ptr));
             size_t fs;
-            ach_status_t r = ach_get( chan_ptr, data_ptr, sizeof(*data_ptr), &fs, NULL, ACH_O_LAST );
+            ach_status_t r;
+            r = (ach_status_t)ach_get( chan_ptr, data_ptr, sizeof(*data_ptr), &fs, NULL, ACH_O_LAST );
             if(ACH_OK != r) 
                 RAVELOG_DEBUG("Channel initial r = %s\n",ach_result_to_string(r));
 
