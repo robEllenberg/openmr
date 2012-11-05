@@ -473,7 +473,7 @@ private:
         //TODO: Test that all controllable joints map correctly
         for (size_t i = 0;i<_dofindices.size();++i){
             size_t dof = _dofindices[i];
-            H_ref.ref[(*_pjointmap)[dof]]=values.at(dof);
+            if ((*_pjointmap)[dof] >= 0) H_ref.ref[]=values[dof];
         }
         struct timespec tnew;
         clock_gettime( CLOCK_REALTIME, &tnew);
