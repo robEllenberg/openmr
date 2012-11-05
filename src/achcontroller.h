@@ -40,7 +40,7 @@ static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 class ACHController : public ControllerBase
 {
 public:
-    ACHController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
+    ACHController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bRecording(false)
     {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
@@ -54,9 +54,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "If set, will check if the robot gets into a collision during movement");
         RegisterCommand("SetThrowExceptions",boost::bind(&ACHController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
+        RegisterCommand("SetRecord",boost::bind(&ACHController::SetRecord,this,_1,_2),
+                        "Enable / disable recording. Format is:\n\n [T/F] [filename]");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
+        _vsendtimes.resize(0);
     }
     virtual ~ACHController() {
     }
@@ -103,13 +106,20 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
         }
         _bPause = false;
+
+        // Create joint map for use with controller
+        _pjointmap=Hubo::MakeDirectJointMap(_probot);
+
         //Setup ACH stuff here:
         _ach=Hubo::setup_channels();
+
         Hubo::setup_memory<hubo_ref>(&H_ref,&(_ach.hubo_ref));
         Hubo::setup_memory<hubo_state>(&H_state,&(_ach.hubo_state));
         Hubo::setup_memory<hubo_param>(&H_param,&(_ach.hubo_param));
-        clock_gettime(CLOCK_REALTIME,&_t);
 
+        clock_gettime(CLOCK_REALTIME,&_t);
+        _vsendtimes.reserve(10*60*2000); //Pre-allocate X minutes worth of timestamps
+        
         return true;
     }
 
@@ -117,6 +127,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     {
         _ptraj.reset();
         _vecdesired.resize(0);
+        _vsendtimes.resize(0); //Note that memory is still reserved..
         if( flog.is_open() ) {
             flog.close();
         }
@@ -241,6 +252,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _ptraj->Clone(ptraj,0);
             _bIsDone = false;
         }
+        //Reset initial time based on RT clock
+        //clock_gettime(CLOCK_REALTIME,&_t);
+        //TODO: test if this is overkill?
 
         return true;
     }
@@ -367,7 +381,37 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         return _probot;
     }
 
+    /**
+     * Start recording controller data to memory.
+     */
+    bool SetRecord(std::ostream& os, std::istream& is)
+    {
+        bool bWasRecording=_bRecording;
+        is >> _bRecording;
+        if (_bRecording)  RAVELOG_INFO("Recording enabled\n");
+        string file;
+        if (is >> file){
+            _outFile.open(file.c_str());
+        }
+        if (bWasRecording && !_bRecording){
+            RAVELOG_INFO("Recording disabled, writing\n");
+            _WriteTimeDataToFile();
+            _outFile.close();
+        }
+        return true;
+    }
+
 private:
+
+    /**Export time data by row. */
+    void _WriteTimeDataToFile()
+    {
+        //Simply iterate over file and dump data
+        FOREACH(it,_vsendtimes){
+            _outFile << *it << endl;
+        }
+    }
+
     virtual bool _Pause(std::ostream& os, std::istream& is)
     {
         is >> _bPause;
@@ -408,33 +452,38 @@ private:
 
     void _SendACHReferences( vector<dReal> values)
     {
-        //TODO: make sure to only change refs for _dofindices controlled
-
-        /* Get latest ACH message */
+        // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
+        // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
         size_t fs;
         ach_status_t r = ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
-
-        if(r != ACH_OK)
-            RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
+        //TODO: Eliminate these log messages? 
+        if(r != ACH_OK) {
+            //RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
+        }
         else   assert( sizeof(H_ref) == fs ); 
 
         r = ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
 
-        if(r != ACH_OK)
-            RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));
+        if(r != ACH_OK) {
+            //RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));
+        }
         else   assert( sizeof(H_state) == fs ); 
 
-        //TODO: Populate structure with sampled joint angles
         string name;
-
+        //TODO: Test that all controllable joints map correctly
         for (size_t i = 0;i<_dofindices.size();++i){
-            name=_probot->GetJointFromDOFIndex(i)->GetName();
-            H_ref.ref[Hubo::name2jmc[name]]=values.at(i);
+            size_t dof = _dofindices[i];
+            H_ref.ref[(*_pjointmap)[dof]]=values.at(dof);
         }
         struct timespec tnew;
         clock_gettime( CLOCK_REALTIME, &tnew);
-        RAVELOG_DEBUG("%llu\n",Hubo::ts_diff(&tnew,&_t));
         ach_put( &(_ach.hubo_ref), &H_ref, sizeof(H_ref));
+        //crude way to force high significant digits)
+        /*RAVELOG_DEBUG("%12.12f %12.12f \n",
+                (double)Hubo::ts_diff(&tnew,&_t)/(double)NSEC_PER_SEC,
+                H_ref.ref[Hubo::name2jmc["LHP"]]);
+                */
+        if (_bRecording) _vsendtimes.push_back(Hubo::ts_diff(&tnew,&_t));
 
     }
 
@@ -456,6 +505,7 @@ private:
         _probot->SetDOFVelocities(curvel,linearvel,angularvel);
         //TODO: use this as safety for self-collisions
         _CheckConfiguration();
+        //TODO: Don't send to ACH if trajectory is complete?
         _SendACHReferences(curvalues); 
     }
     virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
@@ -571,6 +621,12 @@ private:
     struct hubo_param H_param;
 
     struct timespec _t;
+    //TODO: Create a joint log
+    std::vector<uint64_t> _vsendtimes;
+    ofstream _outFile;
+    bool  _bRecording;
+
+    Hubo::DirectJointMapPtr _pjointmap;
 };
 
 ControllerBasePtr CreateACHController(EnvironmentBasePtr penv, std::istream& sinput)
