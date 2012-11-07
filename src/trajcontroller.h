@@ -44,8 +44,6 @@ class TrajectoryController : public ControllerBase
 
             _ref_pos.resize(_probot->GetDOF());
             //Assume Affine DOF + time index gives 8 additional datapoints
-            //_pose.resize(_probot->GetDOF()+7+1);
-            //TODO: deal with derivative groups properly
 
             RAVELOG_DEBUG("Trajectory Controller initialized\n");
 
@@ -217,9 +215,10 @@ class TrajectoryController : public ControllerBase
     private:
 
         bool SetupTrajectory() {
+            // TODO Add locks with timeout to prevent multiple trajectory assignments.
             std::vector<dReal> waypoint;
             dReal dt=0;
-            //TODO: add initial pose as softstart here.
+            //TODO: add initial pose as softstart?
             _spec = _traj->GetConfigurationSpecification(); //Redundant?
             //KLUDGE: Extract total runtime so we know when sampling is complete.
             for (size_t i = 0; i<_traj->GetNumWaypoints();++i){
@@ -236,7 +235,6 @@ class TrajectoryController : public ControllerBase
             data << jointvals.name;
             RAVELOG_DEBUG(jointvals.name);
             RAVELOG_DEBUG("\n");
-            //TODO: mutexes here?
             string name,type;
             data >> type >> name;
 
