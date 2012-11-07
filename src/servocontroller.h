@@ -26,7 +26,6 @@ class ServoController : public ControllerBase
     public:
         ServoController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
-        //TODO: Add a way to set gains per joint to match physical behavior
         __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov, overhauled by Robert Ellenberg";
         RegisterCommand("test",boost::bind(&ServoController::Test,this,_1,_2),
                 "Command for testing and debugging");
@@ -96,13 +95,13 @@ class ServoController : public ControllerBase
             _error.resize(_probot->GetDOF());
             _errSum.resize(_probot->GetDOF());
             _dError.resize(_probot->GetDOF());
+            //TODO replace with stdlib functions (fill?)
             fillVector(_KP,8.3,_probot->GetDOF());
             fillVector(_KI,0,_probot->GetDOF());
             fillVector(_KD,0,_probot->GetDOF());
 
             std::vector<dReal> angle;
             for (size_t i=0; i<_joints.size(); i++) {
-                //TODO: Use iterators?
                 _joints[i]->GetValues(angle);
                 _ref_pos[i]=angle[0];
                 _error[i]=0.0;
@@ -146,7 +145,7 @@ class ServoController : public ControllerBase
                 pos=values[i]*GetInputScale();
 
                 //TODO obviously this will not work for joints with a ROM smaller
-                //than 2*_limitpad.  Shouldn't be an issue, but future releases
+                //than 2*_limitpad. Shouldn't be an issue, but future releases
                 //will fix it.
                 if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
                 else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
@@ -166,7 +165,6 @@ class ServoController : public ControllerBase
 
         virtual void SimulationStep(dReal fTimeElapsed)
         {
-            //TODO: Why would this happen? should this be a more graceful failure?
             assert(fTimeElapsed > 0.0);
 
             const size_t dof=_probot->GetDOF();
@@ -296,13 +294,13 @@ class ServoController : public ControllerBase
         /** Common function to set a single servo reference */
         bool SetServoReference(int servo,dReal &pos)
         {
-            //TODO: possible poor performance here.
-            std::vector<dReal> lower(1);
-            std::vector<dReal> upper(1);
+            std::vector<dReal> lower(3);
+            std::vector<dReal> upper(3);
             _probot->GetJointFromDOFIndex(servo)->GetLimits(lower,upper);
 
             //-- Store the reference position in radians
             pos=pos*GetInputScale();
+            //TODO: handle multi-dof joints
             if ((lower[0]+_limitpad)>pos) _ref_pos[servo]=lower[0]+_limitpad;
             else if ((upper[0]-_limitpad)<pos) _ref_pos[servo]=upper[0]-_limitpad;
             else _ref_pos[servo]=pos;
@@ -325,7 +323,7 @@ class ServoController : public ControllerBase
 
             while (!!is)
             {
-                //Kuldgy packet structure
+                //Kludgy packet structure
                 is >> curjoint;
                 is >> kp;
                 is >> ki;
