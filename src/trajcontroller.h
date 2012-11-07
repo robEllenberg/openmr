@@ -107,8 +107,6 @@ class TrajectoryController : public ControllerBase
         virtual void SimulationStep(dReal fTimeElapsed)
         {
             //RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
-            //-- Update the servos
-            _pservocontroller->SimulationStep(fTimeElapsed);
 
             if (_time>=_runtime || _time < 0.0) {
                 //TODO: should be some kind of interlock here...
@@ -132,6 +130,8 @@ class TrajectoryController : public ControllerBase
                     SetRefPos();
                 }
             }
+
+            _pservocontroller->SimulationStep(fTimeElapsed);
 
         }
 
