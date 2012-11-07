@@ -25,6 +25,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new SinosController(penv));
         else if( interfacename == "trajectorycontroller" )
             return InterfaceBasePtr(new TrajectoryController(penv));
+        else if( interfacename == "achcontroller" )
+            return InterfaceBasePtr(new ACHController(penv,sinput));
         break;
     default:
         break;
@@ -38,8 +40,8 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("ServoController");
     info.interfacenames[PT_Controller].push_back("SinosController");
     info.interfacenames[PT_Controller].push_back("TrajectoryController");
+    info.interfacenames[PT_Controller].push_back("ACHController");
 }
-
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
