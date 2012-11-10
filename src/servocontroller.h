@@ -27,10 +27,10 @@ class ServoController : public ControllerBase
         ServoController(EnvironmentBasePtr penv) : ControllerBase(penv)
     {
         __description = "Servo controller by Juan Gonzalez-Gomez and Rosen Diankov, overhauled by Robert Ellenberg";
-        RegisterCommand("test",boost::bind(&ServoController::Test,this,_1,_2),
-                "Command for testing and debugging");
         RegisterCommand("set",boost::bind(&ServoController::SetProperties,this,_1,_2),
                 "Format: set property value(s)\n Use this command to set controller properties such as gains and individual servo reference positions. Note that this command is independent of the legacy commands");
+        RegisterCommand("get",boost::bind(&ServoController::GetProperties,this,_1,_2),
+                "Format: get property\n Use this command to get the current value of a controller property such as gains.");
         RegisterCommand("setpos",boost::bind(&ServoController::SetPos,this,_1,_2),
                 "Format: setpos s1 s2...sN\n Set the reference position of all the robot joints. If the robot has N joints, there have to be N arguments");
         RegisterCommand("setpos1",boost::bind(&ServoController::SetPos1,this,_1,_2),
@@ -45,7 +45,7 @@ class ServoController : public ControllerBase
                 "Format: record_on . Start recording the servo positions and references to memory");
         RegisterCommand("record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
-        RegisterCommand("print",boost::bind(&ServoController::GetProperties,this,_1,_2),
+        RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
 
     }
@@ -63,10 +63,10 @@ class ServoController : public ControllerBase
 
             //-- Get the robot joints. Are needed in every simulation step for reading the
             //-- joint angles and maxvelocities
-            std::vector<KinBodyPtr> bodies;
-            GetEnv()->GetBodies(bodies);
+            //std::vector<KinBodyPtr> bodies;
+            //GetEnv()->GetBodies(bodies);
             //FIXME: Currently joints are only updated on Init. Changing a robot's structure online may cause trouble.
-            _joints = bodies[0]->GetJoints();
+            _joints = (boost::static_pointer_cast<KinBody>(_probot))->GetJoints();
 
             //-- Initialize the Recording mode
             _recording=false;
@@ -218,14 +218,6 @@ class ServoController : public ControllerBase
 
         }
 
-        //-- Just a command test for debugging...
-        bool Test(std::ostream& os, std::istream& is)
-        {
-            cout<<"Test..." << endl;
-
-            return true;
-        }
-
         /**
          * Set a variety of controller properties via the text interface.
          * The "set" command via this function can control the servo's gains,
@@ -236,24 +228,57 @@ class ServoController : public ControllerBase
             string cmd2;
             stringstream is2;
             while (is){
-                is >> cmd2;
+                if (!(is >> cmd2)) os << false;
                 //Note: old gain-setting interface
-                if ( cmd2 == "gains") {
+                else if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
-                    return SetGains(os,is);  
+                    os << SetGains(os,is);  
                 }
                 else if (cmd2 == "gainvec" || cmd2 == "gainvector")
                 {
                     is2 <<  is.rdbuf();
-                    return SetIndividualGains(os,is2);
+                    SetIndividualGains(os,is2);
                 }
                 else if (cmd2 == "filter")
                 {
-                    _GetFromStream(is,_Kf,0,1,"Integrator Decay Constant");
-                    _GetFromStream(is,_Kf,0,1,"Derivative Filter Constant");
+                    os << _GetFromStream(is,_Ka,0,1,"Derivative Filter Constant");
+                }
+                else if (cmd2 == "decay")
+                {
+                    os << _GetFromStream(is,_Kf,0,1,"Integrator Decay Constant");
                 }
                 else if (cmd2 == "radians" || cmd2 == "radian") _inradians=true;
                 else if (cmd2 == "degrees" || cmd2 == "degree") _inradians=false;
+            }
+            //TODO: decide on return vs os for error reporting
+            os << true;
+            return true;
+        }
+
+        /**
+         * Get a variety of controller properties via the text interface.
+         * The "get" command via this function can report the servo's gains,
+         * units, and other misc. parameters.
+         */
+        bool GetProperties(std::ostream& os, std::istream& is)
+        {
+            string cmd2;
+            is >> cmd2;
+            if (is.fail()) return false;
+            //Note: old gain-setting interface
+            else if (cmd2 == "filter")
+            {
+                os << _Ka;
+            }
+            else if (cmd2 == "decay")
+            {
+                os << _Kf;
+            }
+            else if (cmd2 == "units" ) 
+                os << (_inradians ? "radians" : "degrees");
+            else {
+                RAVELOG_WARN("Command not recognized");
+                return false;
             }
             return true;
         }
@@ -273,7 +298,8 @@ class ServoController : public ControllerBase
             }
             //Consolidated input validation to one function
             TransformConstPtr temp;
-            return SetDesired(_parsed_pos,temp);
+            os <<  SetDesired(_parsed_pos,temp);
+            return true;
         }
 
         /**
@@ -288,7 +314,8 @@ class ServoController : public ControllerBase
             is >> servo;
             is >> pos;
 
-            return SetServoReference(servo,pos);
+            os << SetServoReference(servo,pos);
+            return true;
             //RAVELOG_DEBUG("Limits %f,%f, Input %f, Servo %d Position: %f\n",lower[0],upper[0],pos, servo,_ref_pos[servo]);
         }
 
@@ -302,8 +329,14 @@ class ServoController : public ControllerBase
             //-- Store the reference position in radians
             pos=pos*GetInputScale();
             //TODO: handle multi-dof joints
-            if ((lower[0]+_limitpad)>pos) _ref_pos[servo]=lower[0]+_limitpad;
-            else if ((upper[0]-_limitpad)<pos) _ref_pos[servo]=upper[0]-_limitpad;
+            if ((lower[0]+_limitpad)>pos) {
+                _ref_pos[servo]=lower[0]+_limitpad;
+                RAVELOG_WARN("Command position %f exceeds limit of %f\n",pos,_ref_pos[servo]);
+            }
+            else if ((upper[0]-_limitpad)<pos) {
+                _ref_pos[servo]=upper[0]-_limitpad;
+                RAVELOG_WARN("Command position %f exceeds limit of %f\n",pos,_ref_pos[servo]);
+            }
             else _ref_pos[servo]=pos;
 
             return true;
@@ -330,8 +363,15 @@ class ServoController : public ControllerBase
                 is >> ki;
                 is >> kd;
 
-                if (curjoint < 0 || curjoint > _probot->GetDOF())
+                if (is.fail()) {
+                    RAVELOG_WARN("Format error after joint %d",curjoint);
                     return false;
+                }
+
+                if (curjoint < 0 || curjoint > _probot->GetDOF()) {
+                    RAVELOG_WARN("Input joint %d out of range",curjoint);
+                    return false;
+                }
                 else if (curjoint == _probot->GetDOF())
                 {
                     RAVELOG_DEBUG("Setting all joint gains...\n");
@@ -376,6 +416,7 @@ class ServoController : public ControllerBase
                 if ( kd>=0) _KD[i]=kd;
             }
             //TODO: Assign filter coefs
+            os << true;
             return true;
         }
 
@@ -413,7 +454,7 @@ class ServoController : public ControllerBase
             return true;
         }
 
-        bool GetProperties(std::ostream& os, std::istream& is)
+        bool GetAllProperties(std::ostream& os, std::istream& is)
         {
             FOREACH(it,_dofindices)
             {
@@ -447,7 +488,6 @@ class ServoController : public ControllerBase
             }
 
             _recording=true;
-            os << "1";
 
             return true;
         }
@@ -459,8 +499,7 @@ class ServoController : public ControllerBase
          */
         bool RecordOff(std::ostream& os, std::istream& is)
         {
-            //-- Write the information in the output file
-            //-- Open the file if the record_on command has not opened it already
+            _recording=false;
             string file;
             is >> file;
 
@@ -481,7 +520,8 @@ class ServoController : public ControllerBase
 
             else if (!!is ) {
                 //TODO: verify that outfile can be opened
-                if (!outFile.is_open())     outFile.open(file.c_str());
+                if (!outFile.is_open()) outFile.open(file.c_str());
+                if (outFile.fail()) return false;
 
                 RAVELOG_INFO("Writing servo data %d to %d in data file: %s \n",startDOF,stopDOF,file.c_str());
                 _WriteDataFile(startDOF,stopDOF);
@@ -489,7 +529,7 @@ class ServoController : public ControllerBase
                 outFile.close();
             }
 
-            RAVELOG_INFO("RECORD off, max velocity: %f \n",_joints[0]->GetMaxVel());
+            RAVELOG_INFO("RECORD off");
             return true;
         }
 
