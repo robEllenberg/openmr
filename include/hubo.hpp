@@ -177,4 +177,28 @@ namespace Hubo{
         return pjointmap;
     };
 
+    /**
+     * Create a direct index-to-index map between various robots.
+     * Given a "from" and "to" robot, iterate over joints and find matching names between robots. The array index represents the "from" robot's dof index, while the value stored in the array is 
+     *
+     *      */
+    DirectJointMapPtr MakeDirectJointMap(RobotBasePtr fromrobot,RobotBasePtr torobot)
+    {
+        //TODO: Return constant pointer?
+        DirectJointMapPtr pjointmap (new DirectJointMap());
+        std::string fromname;
+        int fromindex,toindex;
+        pjointmap->resize(fromrobot->GetDOF());
+        unsigned int dof=0;
+        FOREACH(it,*pjointmap) {
+            fromname=fromrobot->GetJointFromDOFIndex(dof)->GetName();
+            toindex=torobot->GetJointIndex(fromname);
+            if ( toindex==-1)
+                RAVELOG_WARN("Joint %s not found!\n",fromname.c_str());
+            *it=toindex;
+            ++dof;
+        }
+        return pjointmap;
+    };
+
 }
