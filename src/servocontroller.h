@@ -76,7 +76,7 @@ class ServoController : public ControllerBase
             _ref_tvec.resize(_joints.size());
 
             //Updated to standard RAVE logging function
-            RAVELOG_DEBUG("servocontroller initialized\n");
+            RAVELOG_DEBUG("servocontroller initialized, controlling %d joints\n",_joints.size());
 
             Reset(0);
 
@@ -488,6 +488,7 @@ class ServoController : public ControllerBase
             }
 
             _recording=true;
+            RAVELOG_INFO("Enabled recording\n");
 
             return true;
         }
@@ -500,11 +501,19 @@ class ServoController : public ControllerBase
         bool RecordOff(std::ostream& os, std::istream& is)
         {
             _recording=false;
+            //Potential interference here, since recording could still be occuring.
             string file;
-            is >> file;
-
             size_t startDOF = 0;
             size_t stopDOF = _phi_tvec.size()-1;
+
+            if ( !(is >> file) ) {
+                //No file provided
+                if (!outFile.is_open()){
+                    RAVELOG_ERROR("No destination provided!\n");
+                    os << 0;
+                    return false;
+                }
+            }
 
             // If only 1 parameter is passed in, make both start and stop equal
             is >> startDOF >> stopDOF;
@@ -517,11 +526,14 @@ class ServoController : public ControllerBase
                 //Send data directly to output string
                 _SerializeRecordedData(os,startDOF,stopDOF);
             }
-
-            else if (!!is ) {
+            else  {
                 //TODO: verify that outfile can be opened
                 if (!outFile.is_open()) outFile.open(file.c_str());
-                if (outFile.fail()) return false;
+
+                if (outFile.fail()) {
+                    RAVELOG_ERROR("Invalid data file %s\n",file.c_str());
+                    return false;
+                }
 
                 RAVELOG_INFO("Writing servo data %d to %d in data file: %s \n",startDOF,stopDOF,file.c_str());
                 _WriteDataFile(startDOF,stopDOF);
