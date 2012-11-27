@@ -15,6 +15,8 @@
 #include "plugindefs.h"
 #include <rave/plugin.h>
 
+
+
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
@@ -25,8 +27,10 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new SinosController(penv));
         else if( interfacename == "trajectorycontroller" )
             return InterfaceBasePtr(new TrajectoryController(penv));
+#ifdef BUILD_ACHCONTROLLER
         else if( interfacename == "achcontroller" )
             return InterfaceBasePtr(new ACHController(penv,sinput));
+#endif
         break;
     default:
         break;
@@ -40,7 +44,9 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("ServoController");
     info.interfacenames[PT_Controller].push_back("SinosController");
     info.interfacenames[PT_Controller].push_back("TrajectoryController");
+#ifdef BUILD_ACHCONTROLLER
     info.interfacenames[PT_Controller].push_back("ACHController");
+#endif
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
