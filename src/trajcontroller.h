@@ -233,8 +233,7 @@ class TrajectoryController : public ControllerBase
             ConfigurationSpecification::Group jointvals=_spec.GetGroupFromName("joint_values");
             stringstream data;
             data << jointvals.name;
-            RAVELOG_DEBUG(jointvals.name);
-            RAVELOG_DEBUG("\n");
+            RAVELOG_DEBUG(jointvals.name+"\n");
             string name,type;
             data >> type >> name;
 
@@ -248,7 +247,7 @@ class TrajectoryController : public ControllerBase
             //Read out the joint
             FOREACH(it,_trajindices){
                 data >> *it;
-                RAVELOG_DEBUG("DOF Index: %d\n",*it);
+                //RAVELOG_DEBUG("DOF Index: %d\n",*it);
             }
 
             if (_runtime>0 && _traj->GetNumWaypoints()>0)
