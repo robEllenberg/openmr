@@ -233,17 +233,17 @@ class ServoController : public ControllerBase
         bool SetProperties(std::ostream& os, std::istream& is)
         {
             string cmd2;
-            stringstream is2;
-            while (is){
-                if (!(is >> cmd2)) os << false;
+            std::stringstream is2;
+            while (is.good()){
+                is >> cmd2;
                 //Note: old gain-setting interface
-                else if ( cmd2 == "gains") {
+                if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
                     os << SetGains(os,is);  
                 }
                 else if (cmd2 == "gainvec" || cmd2 == "gainvector")
                 {
-                    is2 <<  is.rdbuf();
+                    is2 << is.rdbuf();
                     SetIndividualGains(os,is2);
                 }
                 else if (cmd2 == "filter")
