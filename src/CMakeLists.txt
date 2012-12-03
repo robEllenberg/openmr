@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.6.0)
 project (openmr)
 
 option(BUILD_ACHCONTROLLER "Build achcontroller (requires ach libraries)" ON)
+option(USE_CUSTOM_ODERAVE "Use Rob's custom ODE plugin (only if you know what you're doing!)" OFF)
 find_package(OpenRAVE REQUIRED)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
@@ -34,8 +35,13 @@ target_link_libraries(openmr ${OpenRAVE_LIBRARIES})
 install(TARGETS openmr DESTINATION ${PLUGIN_INSTALL_DIR})
 
 if(ACH_DIR AND BUILD_ACHCONTROLLER)
-    ADD_DEFINITIONS(-DBUILD_ACHCONTROLLER)
+    add_definitions(-DBUILD_ACHCONTROLLER)
     add_executable(demo demo-loop.cpp)
     target_link_libraries(openmr ${OpenRAVE_LIBRARIES} ach)
     target_link_libraries(demo ${OpenRAVE_LIBRARIES} ach)
 endif()
+
+if(USE_CUSTOM_ODERAVE)
+    add_definitions(-DUSE_CUSTOM_ODE_PLUGIN)
+endif()
+
