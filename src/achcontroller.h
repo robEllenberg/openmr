@@ -56,6 +56,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
         RegisterCommand("SetRecord",boost::bind(&ACHController::SetRecord,this,_1,_2),
                         "Enable / disable recording. Format is:\n\n [T/F] [filename]");
+        RegisterCommand("SetReadOnly",boost::bind(&ACHController::SetReadOnly,this,_1,_2),
+                        "Choose read-only mode to playback. Format is:\n\n [0/1]");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -106,6 +108,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
         }
         _bPause = false;
+        _bReadOnly = false;
 
         // Create joint map for use with controller
         _pjointmap=Hubo::MakeDirectJointMap(_probot);
@@ -401,6 +404,14 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         return true;
     }
 
+    bool SetReadOnly(std::ostream& os, std::istream& is)
+    {
+        is >> _bReadOnly;
+        if (_bReadOnly)  RAVELOG_INFO("Reading input from hubo-ref channel\n");
+        else  RAVELOG_INFO("Writing input to hubo-ref channel\n");
+        return true;
+    }
+
 private:
 
     /**Export time data by row. */
@@ -450,7 +461,7 @@ private:
         }
     }
 
-    void _SendACHReferences( vector<dReal> values)
+    void _SendACHReferences( const vector<dReal> &values)
     {
         // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
         // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
@@ -469,7 +480,6 @@ private:
         }
         else   assert( sizeof(H_state) == fs ); 
 
-        string name;
         //TODO: Test that all controllable joints map correctly
         for (size_t i = 0;i<_dofindices.size();++i){
             size_t dof = _dofindices[i];
@@ -480,11 +490,37 @@ private:
         ach_put( &(_ach.hubo_ref), &H_ref, sizeof(H_ref));
         //crude way to force high significant digits)
         /*RAVELOG_DEBUG("%12.12f %12.12f \n",
-                (double)Hubo::ts_diff(&tnew,&_t)/(double)NSEC_PER_SEC,
-                H_ref.ref[Hubo::name2jmc["LHP"]]);
-                */
+          (double)Hubo::ts_diff(&tnew,&_t)/(double)NSEC_PER_SEC,
+          H_ref.ref[Hubo::name2jmc["LHP"]]);
+          */
         if (_bRecording) _vsendtimes.push_back(Hubo::ts_diff(&tnew,&_t));
 
+    }
+
+    void _GetACHReferences( vector<dReal> &values)
+    {
+        // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
+        // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
+        size_t fs;
+        ach_status_t r = (ach_status_t) ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
+        //TODO: Eliminate these log messages? 
+        if(r != ACH_OK) {
+            //RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
+        }
+        else   assert( sizeof(H_ref) == fs ); 
+
+        r = (ach_status_t) ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
+
+        if(r != ACH_OK) {
+            //RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));
+        }
+        else   assert( sizeof(H_state) == fs ); 
+
+        //TODO: Test that all controllable joints map correctly
+        for (size_t i = 0;i<_dofindices.size();++i){
+            size_t dof = _dofindices[i];
+            if ((*_pjointmap)[dof] >= 0) values[dof]=H_ref.ref[(*_pjointmap)[dof]];
+        }
     }
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
@@ -495,10 +531,14 @@ private:
         _probot->GetDOFVelocities(curvel);
         Vector linearvel, angularvel;
         _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
-        int i = 0;
-        FOREACH(it,_dofindices) {
-            curvalues.at(*it) = values.at(i++);
-            curvel.at(*it) = 0;
+        if (_bReadOnly) 
+            _GetACHReferences(curvalues); 
+        else {
+            int i = 0;
+            FOREACH(it,_dofindices) {
+                curvalues.at(*it) = values.at(i++);
+                curvel.at(*it) = 0;
+            }
         }
         _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,true);
@@ -625,6 +665,7 @@ private:
     std::vector<uint64_t> _vsendtimes;
     ofstream _outFile;
     bool  _bRecording;
+    bool  _bReadOnly;
 
     Hubo::DirectJointMapPtr _pjointmap;
 };
