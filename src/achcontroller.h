@@ -34,7 +34,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
 
-static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 
 class ACHController : public ControllerBase
 {
@@ -57,6 +56,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "Enable / disable recording. Format is:\n\n [T/F] [filename]");
         RegisterCommand("SetReadOnly",boost::bind(&ACHController::SetReadOnly,this,_1,_2),
                         "Choose read-only mode to playback. Format is:\n\n [0/1]");
+        RegisterCommand("SetVisRobot",boost::bind(&ACHController::SetVisRobot,this,_1,_2),
+                        "Choose the reference mimic robot ");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -117,7 +118,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
         Hubo::setup_memory<hubo_ref>(&H_ref,&(_ach.hubo_ref));
         Hubo::setup_memory<hubo_state>(&H_state,&(_ach.hubo_state));
-        Hubo::setup_memory<hubo_param>(&H_param,&(_ach.hubo_param));
 
         clock_gettime(CLOCK_REALTIME,&_t);
         _vsendtimes.reserve(10*60*2000); //Pre-allocate X minutes worth of timestamps
@@ -266,6 +266,23 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
+        if (_bReadOnly){
+            //TODO: Make these class members
+            std::vector<dReal> vecactual;
+            std::vector<dReal> vecref;
+            vecactual.resize(_dofindices.size());
+            vecref.resize(_dofindices.size());
+            _GetACH(vecref, vecactual);
+            _SetDOFValues(vecactual, 0);
+            if (!!_pvisrobot) {
+
+                TransformPtr trans( new OpenRAVE::Transform);
+                *trans=_probot->GetTransform(); 
+                _pvisrobot->GetController()->SetDesired(vecref,trans);
+            }
+            return;
+        }
+
         boost::mutex::scoped_lock lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
@@ -371,6 +388,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             _bIsDone = true;
         }
+
+        
     }
 
     virtual bool IsDone() {
@@ -411,6 +430,15 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         return true;
     }
 
+    bool SetVisRobot(std::ostream& os, std::istream& is)
+    {
+        string name;
+        is >> name;
+        RobotBasePtr temprobot=_probot->GetEnv()->GetRobot(name);
+        if (!!temprobot){
+            _pvisrobot=temprobot;
+        }
+    }
 private:
 
     /**Export time data by row. */
@@ -496,7 +524,7 @@ private:
 
     }
 
-    void _GetACHReferences( vector<dReal> &values)
+    void _GetACH( vector<dReal> &ref,vector<dReal> &enc)
     {
         // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
         // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
@@ -518,8 +546,12 @@ private:
         //TODO: Test that all controllable joints map correctly
         for (size_t i = 0;i<_dofindices.size();++i){
             size_t dof = _dofindices[i];
-            if ((*_pjointmap)[dof] >= 0) values[dof]=H_ref.ref[(*_pjointmap)[dof]];
+            if ((*_pjointmap)[dof] >= 0){
+                ref[dof]=H_ref.ref[(*_pjointmap)[dof]];
+                enc[dof]=H_state.joint[(*_pjointmap)[dof]].pos;
+            }
         }
+
     }
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
@@ -530,14 +562,10 @@ private:
         _probot->GetDOFVelocities(curvel);
         Vector linearvel, angularvel;
         _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
-        if (_bReadOnly) 
-            _GetACHReferences(curvalues); 
-        else {
-            int i = 0;
-            FOREACH(it,_dofindices) {
-                curvalues.at(*it) = values.at(i++);
-                curvel.at(*it) = 0;
-            }
+        int i = 0;
+        FOREACH(it,_dofindices) {
+            curvalues.at(*it) = values.at(i++);
+            curvel.at(*it) = 0;
         }
         _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,true);
@@ -545,6 +573,7 @@ private:
         //TODO: use this as safety for self-collisions
         _CheckConfiguration();
         //TODO: Don't send to ACH if trajectory is complete?
+        if (!_bReadOnly) 
         _SendACHReferences(curvalues); 
     }
     virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
@@ -563,7 +592,6 @@ private:
         _probot->SetDOFValues(curvalues,t, true);
         _probot->SetDOFVelocities(curvel,Vector(),Vector());
         _CheckConfiguration();
-        _SendACHReferences(curvalues); 
     }
 
 
@@ -620,7 +648,8 @@ private:
         }
     }
 
-    RobotBasePtr _probot;               ///< controlled body
+    RobotBasePtr _probot;             ///< controlled body
+    RobotBasePtr _pvisrobot;          ///< visualization of ref vs actual state
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBasePtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;

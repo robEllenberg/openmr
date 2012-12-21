@@ -150,9 +150,6 @@ namespace Hubo{
         ach_status_t r = (ach_status_t)ach_open(&chan.hubo_ref, HUBO_CHAN_REF_NAME , NULL);
         assert( ACH_OK == r );
 
-        r = (ach_status_t)ach_open(&chan.hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
-        assert( ACH_OK == r );
-
         r = (ach_status_t)ach_open(&chan.hubo_state, HUBO_CHAN_STATE_NAME , NULL);
         assert( ACH_OK == r );
         return chan;

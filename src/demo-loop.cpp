@@ -75,7 +75,7 @@ void huboLoop() {
         printf("\033[2J");
         printf("%s: Cur = %f \t  Diff = %f \t State = %f \t Ref = %f\n",H_param.joint[jnt].name,H_state.joint[jnt].cur, jntDiff, H_state.joint[jnt].pos, H_ref.ref[jnt]);	
 
-        double jntTmp = A*(-cos(f*2.0*pi*t.tv_sec)-1.0)/2.0;
+        double jntTmp = A*(-cos(f*2.0*3.141592653589*t.tv_sec)-1.0)/2.0;
         H_ref.ref[jnt] = dir*jntTmp;
 
         ach_put( &(chan.hubo_ref), &H_ref, sizeof(H_ref));
@@ -115,9 +115,6 @@ int main(int argc, char **argv) {
 
     /* open ach channel */
     int r = ach_open(&(chan.hubo_ref), HUBO_CHAN_REF_NAME , NULL);
-    assert( ACH_OK == r );
-
-    r = ach_open(&chan.hubo_param, HUBO_CHAN_PARAM_NAME , NULL);
     assert( ACH_OK == r );
 
     r = ach_open(&chan.hubo_state, HUBO_CHAN_STATE_NAME , NULL);
