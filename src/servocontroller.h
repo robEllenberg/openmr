@@ -58,7 +58,11 @@ class ServoController : public ControllerBase
             _nControlTransformation = nControlTransformation;
 
             //-- Initialization of the odevelocity controller
+#ifdef USE_CUSTOM_ODE_PLUGIN
+            _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity_rob"); 
+#else
             _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity"); 
+#endif
             _pvelocitycontroller->Init(_probot,_dofindices, nControlTransformation);
 
             //-- Get the robot joints. Are needed in every simulation step for reading the
@@ -72,11 +76,11 @@ class ServoController : public ControllerBase
             _recording=false;
 
             //-- Initialize the vector for the recording mode
-            _phi_tvec.resize(_joints.size());
-            _ref_tvec.resize(_joints.size());
+            _phi_tvec.resize(_dofindices.size());
+            _ref_tvec.resize(_dofindices.size());
 
             //Updated to standard RAVE logging function
-            RAVELOG_DEBUG("servocontroller initialized\n");
+            RAVELOG_DEBUG("servocontroller initialized, controlling %d joints\n",_dofindices.size());
 
             Reset(0);
 
@@ -91,16 +95,16 @@ class ServoController : public ControllerBase
         {
             //-- Initially, the reference positions should be set to the joints position
             //-- in order for the servos to stay in the initial position
-            _angle.resize(_probot->GetDOF());
-            _velocity.resize(_probot->GetDOF());
-            _ref_pos.resize(_probot->GetDOF());
-            _parsed_pos.resize(_probot->GetDOF());
-            _error.resize(_probot->GetDOF());
-            _errSum.resize(_probot->GetDOF());
-            _dError.resize(_probot->GetDOF());
-            _KP.resize(_probot->GetDOF());
-            _KI.resize(_probot->GetDOF());
-            _KD.resize(_probot->GetDOF());
+            _angle.resize(_dofindices.size());
+            _velocity.resize(_dofindices.size());
+            _ref_pos.resize(_dofindices.size());
+            _parsed_pos.resize(_dofindices.size());
+            _error.resize(_dofindices.size());
+            _errSum.resize(_dofindices.size());
+            _dError.resize(_dofindices.size());
+            _KP.resize(_dofindices.size());
+            _KI.resize(_dofindices.size());
+            _KD.resize(_dofindices.size());
 
             //Fill all vectors with default values
             std::fill(_KP.begin(),_KP.end(),8.3);
@@ -131,8 +135,8 @@ class ServoController : public ControllerBase
         virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans) 
         { 
             //Get all the joint limits from the robot
-            std::vector<dReal> lower(_ref_pos.size());
-            std::vector<dReal> upper(_ref_pos.size());
+            std::vector<dReal> lower(_dofindices.size());
+            std::vector<dReal> upper(_dofindices.size());
             _probot->GetDOFLimits(lower,upper);
 
             if ( values.size() < _ref_pos.size())
@@ -175,9 +179,14 @@ class ServoController : public ControllerBase
             dReal error,derror,maxvel,rawcmd,satcmd;
             //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
+            std::vector<dReal> lower(100,0);
+            std::vector<dReal> upper(100,0);
+            
+            //Check all values by DOF to eliminate issues with multi-DOF joints
             _probot->GetDOFValues(_angle);
+            _probot->GetDOFVelocityLimits(lower,upper,_dofindices);
 
-            for (size_t i=0; i<_joints.size(); ++i) {
+            for (size_t i=0; i<_dofindices.size(); ++i) {
 
                 //TODO: (low) Fix this to handle joint DOF varieties properly
                 // Potential slowdown due to dynamic resizing of array?
@@ -192,10 +201,8 @@ class ServoController : public ControllerBase
 
                 rawcmd = error*_KP[i] + derror*_KD[i] + _errSum[i]*_KI[i]; 
 
-                // Limit the velocities to maximum
-                maxvel = _joints[i]->GetMaxVel();
-                if (rawcmd > maxvel) satcmd = maxvel;
-                else if (rawcmd < -maxvel) satcmd = -maxvel;
+                if (rawcmd > upper[i]) satcmd = upper[i];
+                else if (rawcmd < lower[i]) satcmd = lower[i];
                 else satcmd=rawcmd;
                 _velocity[i]=satcmd;
 
@@ -226,17 +233,17 @@ class ServoController : public ControllerBase
         bool SetProperties(std::ostream& os, std::istream& is)
         {
             string cmd2;
-            stringstream is2;
-            while (is){
-                if (!(is >> cmd2)) os << false;
+            std::stringstream is2;
+            while (is.good()){
+                is >> cmd2;
                 //Note: old gain-setting interface
-                else if ( cmd2 == "gains") {
+                if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
                     os << SetGains(os,is);  
                 }
                 else if (cmd2 == "gainvec" || cmd2 == "gainvector")
                 {
-                    is2 <<  is.rdbuf();
+                    is2 << is.rdbuf();
                     SetIndividualGains(os,is2);
                 }
                 else if (cmd2 == "filter")
@@ -428,10 +435,10 @@ class ServoController : public ControllerBase
         bool GetPos(std::ostream& os, std::istream& is)
         {
             std::vector<dReal> angle;
-            for(size_t i = 0; i < _ref_pos.size(); ++i) {
 
+            _probot->GetDOFValues(angle,_dofindices);
+            for(size_t i = 0; i < _ref_pos.size(); ++i) {
                 //-- Get the current joint angle of the i'th servo
-                _joints[i]->GetValues(angle);
                 os << angle[0]/GetInputScale() << " ";
             }
             return true;
@@ -448,7 +455,9 @@ class ServoController : public ControllerBase
             is >> servo;
 
             //-- Get the current joint angle
-            _joints[servo]->GetValues(angle);
+            std::vector<int> index (1,0);
+            index[0]=servo;
+            _probot->GetDOFValues(angle,index);
             os << angle[0]/GetInputScale() << " ";
 
             return true;
@@ -476,7 +485,7 @@ class ServoController : public ControllerBase
         {
 
             //-- Reset the data vectors
-            for (size_t i=0; i<_joints.size(); i++) {
+            for (size_t i=0; i<_dofindices.size(); i++) {
                 _phi_tvec[i].resize(0);
                 _ref_tvec[i].resize(0);
             }
@@ -488,6 +497,7 @@ class ServoController : public ControllerBase
             }
 
             _recording=true;
+            RAVELOG_INFO("Enabled recording\n");
 
             return true;
         }
@@ -500,11 +510,19 @@ class ServoController : public ControllerBase
         bool RecordOff(std::ostream& os, std::istream& is)
         {
             _recording=false;
+            //Potential interference here, since recording could still be occuring.
             string file;
-            is >> file;
-
             size_t startDOF = 0;
             size_t stopDOF = _phi_tvec.size()-1;
+
+            if ( !(is >> file) ) {
+                //No file provided
+                if (!outFile.is_open()){
+                    RAVELOG_ERROR("No destination provided!\n");
+                    os << 0;
+                    return false;
+                }
+            }
 
             // If only 1 parameter is passed in, make both start and stop equal
             is >> startDOF >> stopDOF;
@@ -517,11 +535,14 @@ class ServoController : public ControllerBase
                 //Send data directly to output string
                 _SerializeRecordedData(os,startDOF,stopDOF);
             }
-
-            else if (!!is ) {
+            else  {
                 //TODO: verify that outfile can be opened
                 if (!outFile.is_open()) outFile.open(file.c_str());
-                if (outFile.fail()) return false;
+
+                if (outFile.fail()) {
+                    RAVELOG_ERROR("Invalid data file %s\n",file.c_str());
+                    return false;
+                }
 
                 RAVELOG_INFO("Writing servo data %d to %d in data file: %s \n",startDOF,stopDOF,file.c_str());
                 _WriteDataFile(startDOF,stopDOF);
