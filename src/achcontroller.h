@@ -29,7 +29,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OPENRAVE_ACHCONTROLLER_H
 
 #include <math.h>
-#include <fstream>
 #include "ach-setup.h"
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>

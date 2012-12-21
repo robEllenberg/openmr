@@ -222,6 +222,13 @@ class ServoController : public ControllerBase
 
             // Assign desired joint velocities
             _pvelocitycontroller->SetDesired(_velocity);
+            
+            if (!!_pvisrobot) {
+                
+                TransformPtr trans( new OpenRAVE::Transform);
+                *trans=_probot->GetTransform(); 
+                _pvisrobot->GetController()->SetDesired(_ref_pos,trans);
+            }
 
         }
 
@@ -256,6 +263,14 @@ class ServoController : public ControllerBase
                 }
                 else if (cmd2 == "radians" || cmd2 == "radian") _inradians=true;
                 else if (cmd2 == "degrees" || cmd2 == "degree") _inradians=false;
+                else if (cmd2 == "visrobot"){
+                    string name;
+                    is >> name;
+                    RobotBasePtr temprobot=_probot->GetEnv()->GetRobot(name);
+                    if (!!temprobot){
+                        _pvisrobot=temprobot;
+                    }
+                }
             }
             //TODO: decide on return vs os for error reporting
             os << true;
@@ -676,6 +691,7 @@ class ServoController : public ControllerBase
 
     protected:
         RobotBasePtr _probot;
+        RobotBasePtr _pvisrobot;
         std::vector<int> _dofindices;
         int _nControlTransformation;
 

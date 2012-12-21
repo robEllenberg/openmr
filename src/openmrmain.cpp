@@ -15,6 +15,10 @@
 #include "plugindefs.h"
 #include <rave/plugin.h>
 
+#include <math.h>
+#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
+#include <openrave/utils.h>
 
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -27,6 +31,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return InterfaceBasePtr(new SinosController(penv));
         else if( interfacename == "trajectorycontroller" )
             return InterfaceBasePtr(new TrajectoryController(penv));
+        else if( interfacename == "mimiccontroller" )
+            return InterfaceBasePtr(new MimicController(penv,sinput));
 #ifdef BUILD_ACHCONTROLLER
         else if( interfacename == "achcontroller" )
             return InterfaceBasePtr(new ACHController(penv,sinput));
@@ -44,6 +50,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("ServoController");
     info.interfacenames[PT_Controller].push_back("SinosController");
     info.interfacenames[PT_Controller].push_back("TrajectoryController");
+    info.interfacenames[PT_Controller].push_back("MimicController");
 #ifdef BUILD_ACHCONTROLLER
     info.interfacenames[PT_Controller].push_back("ACHController");
 #endif
