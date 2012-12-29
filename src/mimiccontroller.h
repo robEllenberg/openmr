@@ -119,7 +119,11 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
     {
-        if( values.size() != _dofindices.size() ) {
+        //KLUDGE: "Cheat", assumes that we might have a visualization robot
+        //with fewer DOF than the original, but otherwise the same format. The
+        //right way to do this iterating over each robot's joints to match up
+        //the names, but that's much more expensive.
+        if( values.size() < _dofindices.size() ) {
             throw openrave_exception(str(boost::format("wrong desired dimensions %d!=%d")%values.size()%_dofindices.size()),ORE_InvalidArguments);
         }
         if( !_bPause ) {
