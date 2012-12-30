@@ -18,7 +18,7 @@
 #include <math.h>
 #include <fstream>
 
-//-- Time vector
+// Time vector
 typedef std::vector<dReal> tvector;
 
 class ServoController : public ControllerBase
@@ -57,7 +57,7 @@ class ServoController : public ControllerBase
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
 
-            //-- Initialization of the odevelocity controller
+            // Initialization of the odevelocity controller
 #ifdef USE_CUSTOM_ODE_PLUGIN
             _pvelocitycontroller = RaveCreateController(GetEnv(),"odevelocity_rob"); 
 #else
@@ -65,17 +65,17 @@ class ServoController : public ControllerBase
 #endif
             _pvelocitycontroller->Init(_probot,_dofindices, nControlTransformation);
 
-            //-- Get the robot joints. Are needed in every simulation step for reading the
-            //-- joint angles and maxvelocities
+            // Get the robot joints. Are needed in every simulation step for reading the
+            // joint angles and maxvelocities
             //std::vector<KinBodyPtr> bodies;
             //GetEnv()->GetBodies(bodies);
             //FIXME: Currently joints are only updated on Init. Changing a robot's structure online may cause trouble.
             _joints = (boost::static_pointer_cast<KinBody>(_probot))->GetJoints();
 
-            //-- Initialize the Recording mode
+            // Initialize the Recording mode
             _recording=false;
 
-            //-- Initialize the vector for the recording mode
+            // Initialize the vector for the recording mode
             _phi_tvec.resize(_dofindices.size());
             _ref_tvec.resize(_dofindices.size());
 
@@ -93,8 +93,8 @@ class ServoController : public ControllerBase
 
         virtual void Reset(int options)
         {
-            //-- Initially, the reference positions should be set to the joints position
-            //-- in order for the servos to stay in the initial position
+            // Initially, the reference positions should be set to the joints position
+            // in order for the servos to stay in the initial position
             _angle.resize(_dofindices.size());
             _velocity.resize(_dofindices.size());
             _ref_pos.resize(_dofindices.size());
@@ -116,7 +116,7 @@ class ServoController : public ControllerBase
             std::fill(_dError.begin(),_dError.end(),0);
             std::fill(_parsed_pos.begin(),_parsed_pos.end(),0);
 
-            //-- Default value of the Proportional controller KP constant from old OpenMR
+            // Default value of the Proportional controller KP constant from old OpenMR
             // This should be backwards compatible with old code
             _Kf=.9998;
             _Ka=.1;
@@ -348,7 +348,7 @@ class ServoController : public ControllerBase
             std::vector<dReal> upper(3);
             _probot->GetJointFromDOFIndex(servo)->GetLimits(lower,upper);
 
-            //-- Store the reference position in radians
+            // Store the reference position in radians
             pos=pos*GetInputScale();
             //TODO: handle multi-dof joints
             if ((lower[0]+_limitpad)>pos) {
@@ -453,7 +453,7 @@ class ServoController : public ControllerBase
 
             _probot->GetDOFValues(angle,_dofindices);
             for(size_t i = 0; i < _ref_pos.size(); ++i) {
-                //-- Get the current joint angle of the i'th servo
+                // Get the current joint angle of the i'th servo
                 os << angle[0]/GetInputScale() << " ";
             }
             return true;
@@ -469,7 +469,7 @@ class ServoController : public ControllerBase
             std::vector<dReal> angle;
             is >> servo;
 
-            //-- Get the current joint angle
+            // Get the current joint angle
             std::vector<int> index (1,0);
             index[0]=servo;
             _probot->GetDOFValues(angle,index);
@@ -499,7 +499,7 @@ class ServoController : public ControllerBase
         bool RecordOn(std::ostream& os, std::istream& is)
         {
 
-            //-- Reset the data vectors
+            // Reset the data vectors
             for (size_t i=0; i<_dofindices.size(); i++) {
                 _phi_tvec[i].resize(0);
                 _ref_tvec[i].resize(0);
@@ -641,7 +641,7 @@ class ServoController : public ControllerBase
 
             writeGains();
 
-            //-- Servos angle
+            // Servos angle
             for (size_t s=startDOF; s<stopDOF; s++) {
                 outFile << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
                 for (size_t t=0; t<size; t++) {
@@ -650,7 +650,7 @@ class ServoController : public ControllerBase
                 outFile << endl;
             }
 
-            //-- Reference positions
+            // Reference positions
             for (size_t s=startDOF; s<stopDOF; s++) {
                 outFile << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
                 for (size_t t=0; t<size; t++) {
@@ -670,7 +670,7 @@ class ServoController : public ControllerBase
             stopDOF++;
             // Servo properties (gains)
 
-            //-- Servos angle
+            // Servos angle
             for (size_t s=startDOF; s<stopDOF; s++) {
                 os << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
                 for (size_t t=0; t<size; t++) {
@@ -679,7 +679,7 @@ class ServoController : public ControllerBase
                 os << endl;
             }
 
-            //-- Reference positions
+            // Reference positions
             for (size_t s=startDOF; s<stopDOF; s++) {
                 os << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
                 for (size_t t=0; t<size; t++) {
@@ -711,8 +711,8 @@ class ServoController : public ControllerBase
         std::vector<dReal> _KD;
 
         /** Filter constants for integrator and differentiator */
-        dReal _Kf;                    // -- "Forgetting" constant of integrator
-        dReal _Ka;                    // -- first order filter for derivative
+        dReal _Kf;                    // "Forgetting" constant of integrator
+        dReal _Ka;                    // first order filter for derivative
 
         /** Unit system flag (radians vs degrees) */
         dReal _inradians;
@@ -721,11 +721,11 @@ class ServoController : public ControllerBase
         dReal _limitpad;
         dReal _time;
 
-        //-- For recording....
-        ofstream outFile;                 //-- Stream file for storing the servo positions
-        bool _recording;                  //-- Recording mode
-        std::vector<tvector> _phi_tvec;     //-- Servo's angles in time
-        std::vector<tvector> _ref_tvec;     //-- Servo's reference positions in time
+        // For recording....
+        ofstream outFile;                 // Stream file for storing the servo positions
+        bool _recording;                  // Recording mode
+        std::vector<tvector> _phi_tvec;     // Servo's angles in time
+        std::vector<tvector> _ref_tvec;     // Servo's reference positions in time
 
 };
 
