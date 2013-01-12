@@ -187,7 +187,7 @@ namespace Hubo{
         //TODO: Return constant pointer?
         DirectJointMapPtr pjointmap (new DirectJointMap());
         std::string fromname;
-        int fromindex,toindex;
+        int toindex;
         pjointmap->resize(fromrobot->GetDOF());
         unsigned int dof=0;
         FOREACH(it,*pjointmap) {

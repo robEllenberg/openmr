@@ -108,7 +108,7 @@ class TrajectoryController : public ControllerBase
         {
             //RAVELOG_VERBOSE("Elapsed time is %f\n",_time);
 
-            if (_time>=_runtime || _time < 0.0) {
+            if (_running && (_time>=_runtime || _time < 0.0)) {
                 //TODO: should be some kind of interlock here...
                 _complete=true;
                 _running=false;
@@ -147,6 +147,14 @@ class TrajectoryController : public ControllerBase
                         _timestep=temp;
                     }
                     else RAVELOG_WARN("Timestep %f out of range, ignoring\n",_timestep);
+                }
+                else if ( cmd2 == "freq" ) {
+
+                    is >> temp;
+                    if (temp > 0) {
+                        _timestep=1/temp;
+                    }
+                else RAVELOG_WARN("Freq %f out of range, ignoring\n",temp);
                 }
                 else if ( cmd2 == "softstart" ) {
                     is >> temp;
