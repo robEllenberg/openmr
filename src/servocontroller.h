@@ -385,11 +385,6 @@ class ServoController : public ControllerBase
                 is >> ki;
                 is >> kd;
 
-                if (is.fail()) {
-                    RAVELOG_WARN("Format error after joint %d",curjoint);
-                    return false;
-                }
-
                 if (curjoint < 0 || curjoint > _probot->GetDOF()) {
                     RAVELOG_WARN("Input joint %d out of range",curjoint);
                     return false;
