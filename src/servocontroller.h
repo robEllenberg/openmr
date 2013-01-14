@@ -400,11 +400,12 @@ class ServoController : public ControllerBase
                         if ( kd>=0.0) _KD[i]=kd;
                     }
                 }
-                else{
-                    if ( kp>=0.0) _KP[curjoint]=kp;
-                    if ( ki>=0.0) _KI[curjoint]=ki;
-                    if ( kd>=0.0) _KD[curjoint]=kd;
+                else if ( kp>=0.0 && kd>=0.0 && ki>=0.0) {
+                    _KI[curjoint]=ki;
+                    _KD[curjoint]=kd;
+                    _KP[curjoint]=kp;
                 }
+
             }
             return true;
         }
