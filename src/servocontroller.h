@@ -95,6 +95,7 @@ class ServoController : public ControllerBase
         {
             // Initially, the reference positions should be set to the joints position
             // in order for the servos to stay in the initial position
+            _callback.reset();
             _angle.resize(_dofindices.size());
             _velocity.resize(_dofindices.size());
             _ref_pos.resize(_dofindices.size());
@@ -176,7 +177,7 @@ class ServoController : public ControllerBase
 
             const size_t dof=_probot->GetDOF();
 
-            dReal error,derror,maxvel,rawcmd,satcmd;
+            dReal error,derror,rawcmd,satcmd;
             //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
             std::vector<dReal> lower(100,0);
@@ -222,14 +223,13 @@ class ServoController : public ControllerBase
 
             // Assign desired joint velocities
             _pvelocitycontroller->SetDesired(_velocity);
-            
-            if (!!_pvisrobot) {
-                
-                TransformPtr trans( new OpenRAVE::Transform);
-                *trans=_probot->GetTransform(); 
-                _pvisrobot->GetController()->SetDesired(_ref_pos,trans);
-            }
 
+        }
+
+        void MimicRobotPose(const RobotBasePtr probot,const RobotBasePtr pvisrobot,std::vector<dReal>& values)
+        {
+            pvisrobot->SetTransform(probot->GetTransform());
+            pvisrobot->GetController()->SetDesired(values);
         }
 
         /**
@@ -269,6 +269,25 @@ class ServoController : public ControllerBase
                     RobotBasePtr temprobot=_probot->GetEnv()->GetRobot(name);
                     if (!!temprobot){
                         _pvisrobot=temprobot;
+                        _pvisrobot->Enable(false);
+                        //More efficient way of updating robot
+                        std::vector<dReal> lower;
+                        std::vector<dReal> upper;
+
+                        lower.resize(_pvisrobot->GetDOF());
+                        upper.resize(_pvisrobot->GetDOF());
+
+                        fill(lower.begin(),lower.end(),-PI); 
+                        fill(upper.begin(),upper.end(),PI); 
+                        //Remove any limits since the ref robot is not used for checking
+                        _pvisrobot->SetDOFLimits(lower,upper);
+                        stringstream ss;
+                        ss << "SetFollowRobot " << _probot->GetName();
+                        _pvisrobot->GetController()->SendCommand(os,ss);
+                        ViewerBasePtr pviewer=_probot->GetEnv()->GetViewer();
+                        if (!!pviewer){
+                            _callback= pviewer->RegisterViewerThreadCallback(boost::bind(&ServoController::MimicRobotPose,this,_probot,_pvisrobot,boost::ref(_ref_pos)));
+                        }
                     }
                 }
             }
@@ -722,6 +741,7 @@ class ServoController : public ControllerBase
         bool _recording;                  // Recording mode
         std::vector<tvector> _phi_tvec;     // Servo's angles in time
         std::vector<tvector> _ref_tvec;     // Servo's reference positions in time
+        UserDataPtr _callback;
 
 };
 

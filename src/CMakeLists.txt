@@ -9,9 +9,9 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall -std=gnu++0x")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-include_directories( ${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${CMAKE_CURRENT_SOURCE_DIR}/../../../hubo-ach/include")
+include_directories( ${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 
-link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} "/usr/local/lib") 
+link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS}) 
 
 add_library(openmr SHARED openmrmain.cpp)
 set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")

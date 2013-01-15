@@ -50,7 +50,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "pauses the controller from reacting to commands ");
         RegisterCommand("SetCheckCollisions",boost::bind(&MimicController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
-        RegisterCommand("FollowRobot",boost::bind(&MimicController::_SetCheckCollisions,this,_1,_2),
+        RegisterCommand("SetFollowRobot",boost::bind(&MimicController::_SetFollowRobot,this,_1,_2),
                         "Supply the name of a robot to follow its motions (should be the same type of robot!");
         _fCommandTime = 0;
         _nControlTransformation = 1;
@@ -61,6 +61,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
+        _psrcrobot.reset();
         if( flog.is_open() ) {
             flog.close();
         }
@@ -127,11 +128,15 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             throw openrave_exception(str(boost::format("wrong desired dimensions %d!=%d")%values.size()%_dofindices.size()),ORE_InvalidArguments);
         }
         if( !_bPause ) {
+            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( !!trans ) {
                 _tdesired = *trans;
             }
-            else {
+            else if (!!_psrcrobot) {
+                _tdesired = _psrcrobot->GetTransform();
+            }
+            else  {
                 _tdesired = _probot->GetTransform();
             }
             _SetDOFValues(_vecdesired,_tdesired,0);
@@ -174,6 +179,13 @@ private:
         }
         return !!is;
     }
+    virtual bool _SetFollowRobot(std::ostream& os, std::istream& is)
+    {
+        string name;
+        is >> name;
+        _psrcrobot=_probot->GetEnv()->GetRobot(name);
+        return !!is;
+    }
     virtual bool _SetThrowExceptions(std::ostream& os, std::istream& is)
     {
         is >> _bThrowExceptions;
@@ -202,89 +214,31 @@ private:
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
     {
-        vector<dReal> prevvalues, curvalues, curvel;
+        vector<dReal> prevvalues, curvalues;
         _probot->GetDOFValues(prevvalues);
         curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
-        Vector linearvel, angularvel;
-        _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
-        int i = 0;
+        int i =0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
-            curvel.at(*it) = 0;
         }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,true);
-        _probot->SetDOFVelocities(curvel,linearvel,angularvel);
-        _CheckConfiguration();
     }
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
     {
         BOOST_ASSERT(_nControlTransformation);
-        vector<dReal> prevvalues, curvalues, curvel;
+        vector<dReal> prevvalues, curvalues;
         _probot->GetDOFValues(prevvalues);
         curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
-        int i = 0;
+        int i =0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
-            curvel.at(*it) = 0;
         }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
         _probot->SetDOFValues(curvalues,t, true);
-        _probot->SetDOFVelocities(curvel,Vector(),Vector());
-        _CheckConfiguration();
-    }
-
-
-    void _CheckLimits(std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
-    {
-        for(size_t i = 0; i < _vlower[0].size(); ++i) {
-            if( !_dofcircular[i] ) {
-                if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
-                }
-                if( curvalues.at(i) > _vupper[0][i]+g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %e > %e, time=%f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
-                }
-            }
-        }
-        if( timeelapsed > 0 ) {
-            vector<dReal> vdiff = curvalues;
-            _probot->SubtractDOFValues(vdiff,prevvalues);
-            for(size_t i = 0; i < _vupper[1].size(); ++i) {
-                dReal maxallowed = timeelapsed * _vupper[1][i]+g_fEpsilonJointLimit;
-                if( RaveFabs(vdiff.at(i)) > maxallowed ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %f > %f, time=%f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
-                }
-            }
-        }
-    }
-
-    void _CheckConfiguration()
-    {
-        if( _bCheckCollision ) {
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_probot),_report) ) {
-                _ReportError(str(boost::format("collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
-            }
-            if( _probot->CheckSelfCollision(_report) ) {
-                _ReportError(str(boost::format("self collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
-            }
-        }
-    }
-
-    void _ReportError(const std::string& s)
-    {
-        if( _bThrowExceptions ) {
-            throw openrave_exception(s,ORE_Assert);
-        }
-        else {
-            RAVELOG_WARN(s);
-        }
     }
 
     RobotBasePtr _probot;               ///< controlled body
+    RobotBasePtr _psrcrobot;               ///< robot source of ref poses
 
     dReal _fCommandTime;
 
