@@ -127,6 +127,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             throw openrave_exception(str(boost::format("wrong desired dimensions %d!=%d")%values.size()%_dofindices.size()),ORE_InvalidArguments);
         }
         if( !_bPause ) {
+            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( !!trans ) {
                 _tdesired = *trans;

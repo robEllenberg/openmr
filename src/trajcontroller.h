@@ -335,7 +335,7 @@ class TrajectoryController : public ControllerBase
         std::vector<dReal> _pose; // complete current timeslice of a loaded trajectory
         std::vector<dReal> _activejointvalues; // Set of joint values of trajectory active dof
         std::vector<int> _trajindices; // Set of joint values of trajectory active dof
-        ConfigurationSpecification _spec; //COnfiguration spec for the trajectgory (not sure we need this)
+        ConfigurationSpecification _spec; //Configuration spec for the trajectory 
         std::vector<dReal>::iterator _itdata; //Iterator for ConfigurationSpecification to extract data with.
         std::vector<dReal>::iterator _itref; //Iterator for ConfigurationSpecification to extract data with.
 
