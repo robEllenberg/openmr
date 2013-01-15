@@ -177,7 +177,7 @@ class ServoController : public ControllerBase
 
             const size_t dof=_probot->GetDOF();
 
-            dReal error,derror,maxvel,rawcmd,satcmd;
+            dReal error,derror,rawcmd,satcmd;
             //RAVELOG_DEBUG("fTimeElapsed %f\n",fTimeElapsed);
 
             std::vector<dReal> lower(100,0);
@@ -223,13 +223,6 @@ class ServoController : public ControllerBase
 
             // Assign desired joint velocities
             _pvelocitycontroller->SetDesired(_velocity);
-            
-            //if (!!_pvisrobot) {
-                
-                //TransformPtr trans( new OpenRAVE::Transform);
-                //*trans=_probot->GetTransform(); 
-                //_pvisrobot->GetController()->SetDesired(_ref_pos,trans);
-            //}
 
         }
 
@@ -276,7 +269,21 @@ class ServoController : public ControllerBase
                     RobotBasePtr temprobot=_probot->GetEnv()->GetRobot(name);
                     if (!!temprobot){
                         _pvisrobot=temprobot;
+                        _pvisrobot->Enable(false);
+                        //More efficient way of updating robot
+                        std::vector<dReal> lower;
+                        std::vector<dReal> upper;
 
+                        lower.resize(_pvisrobot->GetDOF());
+                        upper.resize(_pvisrobot->GetDOF());
+
+                        fill(lower.begin(),lower.end(),-PI); 
+                        fill(upper.begin(),upper.end(),PI); 
+                        //Remove any limits since the ref robot is not used for checking
+                        _pvisrobot->SetDOFLimits(lower,upper);
+                        stringstream ss;
+                        ss << "SetFollowRobot " << _probot->GetName();
+                        _pvisrobot->GetController()->SendCommand(os,ss);
                         ViewerBasePtr pviewer=_probot->GetEnv()->GetViewer();
                         if (!!pviewer){
                             _callback= pviewer->RegisterViewerThreadCallback(boost::bind(&ServoController::MimicRobotPose,this,_probot,_pvisrobot,boost::ref(_ref_pos)));
