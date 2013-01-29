@@ -48,7 +48,7 @@ class ServoController : public ControllerBase
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
         RegisterCommand("openloop",boost::bind(&ServoController::SetOpenLoopJoints,this,_1,_2),
-                "Set the given joint indices or names to open-loop torque control.");
+                "Set the given joint indices to open-loop torque control.");
 
     }
         virtual ~ServoController() {}
@@ -81,6 +81,7 @@ class ServoController : public ControllerBase
             _phi_tvec.resize(_dofindices.size());
             _ref_tvec.resize(_dofindices.size());
             _vbOpenLoop.resize(_dofindices.size());
+            _vTorqueJoints.resize(_dofindices.size());
 
             //Updated to standard RAVE logging function
             RAVELOG_DEBUG("servocontroller initialized, controlling %d joints\n",_dofindices.size());
@@ -190,6 +191,10 @@ class ServoController : public ControllerBase
             _probot->GetDOFValues(_angle);
             _probot->GetDOFVelocityLimits(lower,upper,_dofindices);
 
+            std::vector<dReal> addedtorque(1,0);
+            std::vector<dReal> ql(1,0);
+            std::vector<dReal> qh(1,0);
+
             for (size_t i=0; i<_dofindices.size(); ++i) {
 
                 //TODO: (low) Fix this to handle joint DOF varieties properly
@@ -214,6 +219,12 @@ class ServoController : public ControllerBase
                 _error[i] = error;
                 _dError[i] = derror;
 
+                //If open loop, assume that PID control has no effect since motor toque is 0, so just add torque here.
+                if (_vbOpenLoop[i])
+                    _probot->GetJointFromDOFIndex(i)->GetLimits(ql,qh);
+                    //Torque is proportional to distance from mean joint value for now
+                    addedtorque[0]=_ref_pos[i]-(qh[0]+ql[0])/2.0;
+                    _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
             }
 
             //Check for record flag and copy DOF values into storage if necessary
@@ -223,6 +234,7 @@ class ServoController : public ControllerBase
                     _ref_tvec[i].push_back(_ref_pos[i]);
                 }
             }
+
 
             // Assign desired joint velocities
             _pvelocitycontroller->SetDesired(_velocity);
@@ -597,25 +609,12 @@ class ServoController : public ControllerBase
             std::vector<dReal> zerotorque(1,0);
             while (is.good()){
                 int ind=-1;
-                //Kuldge, better way to do this would be with the istream failbit, but I can't get it to work right.
-                string name="invalidjointname";
                 is >> ind;
-                is >> name;
 
-                if (ind>=0){
+                if (!is.fail()){
                     RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
                     _vbOpenLoop.at(ind)=true;
                     _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(zerotorque);
-
-                }
-                if (name != "invalidjointname"){
-                    OpenRAVE::KinBody::JointPtr jnt=_probot->GetJoint(name);
-                    if (!!jnt){
-                        ind=jnt->GetDOFIndex();
-                        _vbOpenLoop.at(ind)=true;
-                        RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
-                        jnt->SetTorqueLimits(zerotorque);
-                    }
                 }
             }
             //TODO: decide on return vs os for error reporting
@@ -782,6 +781,7 @@ class ServoController : public ControllerBase
         std::vector<tvector> _ref_tvec;     // Servo's reference positions in time
         UserDataPtr _callback;
         std::vector<bool> _vbOpenLoop;
+        std::vector<OpenRAVE::KinBody::JointPtr> _vTorqueJoints;
 
 };
 
