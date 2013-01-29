@@ -47,6 +47,8 @@ class ServoController : public ControllerBase
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
+        RegisterCommand("openloop",boost::bind(&ServoController::SetOpenLoopJoints,this,_1,_2),
+                "Set the given joint indices or names to open-loop torque control.");
 
     }
         virtual ~ServoController() {}
@@ -78,6 +80,7 @@ class ServoController : public ControllerBase
             // Initialize the vector for the recording mode
             _phi_tvec.resize(_dofindices.size());
             _ref_tvec.resize(_dofindices.size());
+            _vbOpenLoop.resize(_dofindices.size());
 
             //Updated to standard RAVE logging function
             RAVELOG_DEBUG("servocontroller initialized, controlling %d joints\n",_dofindices.size());
@@ -584,6 +587,42 @@ class ServoController : public ControllerBase
             return true;
         }
 
+        /**
+         * Enable open-loop torque control for selected joints.
+         * This is a hack that disables PID control for a given joint.
+         * Note that the current implementation is not exactly thread-safe. This command could cause trouble if it's called mid-simulation.
+         */
+        bool SetOpenLoopJoints(std::ostream& os, std::istream& is)
+        {
+            std::vector<dReal> zerotorque(1,0);
+            while (is.good()){
+                int ind=-1;
+                //Kuldge, better way to do this would be with the istream failbit, but I can't get it to work right.
+                string name="invalidjointname";
+                is >> ind;
+                is >> name;
+
+                if (ind>=0){
+                    RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
+                    _vbOpenLoop.at(ind)=true;
+                    _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(zerotorque);
+
+                }
+                if (name != "invalidjointname"){
+                    OpenRAVE::KinBody::JointPtr jnt=_probot->GetJoint(name);
+                    if (!!jnt){
+                        ind=jnt->GetDOFIndex();
+                        _vbOpenLoop.at(ind)=true;
+                        RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
+                        jnt->SetTorqueLimits(zerotorque);
+                    }
+                }
+            }
+            //TODO: decide on return vs os for error reporting
+            os << true;
+            return true;
+        }
+
         virtual bool IsDone()
         {
             return false;
@@ -742,6 +781,7 @@ class ServoController : public ControllerBase
         std::vector<tvector> _phi_tvec;     // Servo's angles in time
         std::vector<tvector> _ref_tvec;     // Servo's reference positions in time
         UserDataPtr _callback;
+        std::vector<bool> _vbOpenLoop;
 
 };
 
