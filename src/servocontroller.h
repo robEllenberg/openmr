@@ -175,7 +175,7 @@ class ServoController : public ControllerBase
                         //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
                         break;
                     case OPEN_LOOP:
-                        _ref_pos[i]=values[i]*GetInputScale();
+                        _ref_pos[i]=values[i];
                         break;
                     default:
                         break;
@@ -239,12 +239,7 @@ class ServoController : public ControllerBase
                         //If open loop, assume that PID control has no effect since motor toque is 0, so just add torque here.
                         break;
                     case OPEN_LOOP:
-                        _velocity[i]=0.0;
-                        //reset error since it is no longer tracked
-                        _error[i]=0.0;
                         addedtorque[0]=_ref_pos[i];
-                        if (addedtorque[0] > tlimit[i]) addedtorque[0] = tlimit[i];
-                        else if (addedtorque[0] < -tlimit[i]) addedtorque[0] = -tlimit[i];
                         _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
                         break;
                     default:
@@ -631,17 +626,22 @@ class ServoController : public ControllerBase
          */
         bool SetOpenLoopJoints(std::ostream& os, std::istream& is)
         {
+            std::vector<dReal> zerotorque(1,0); 
             while (is.good()){
                 int ind=-1;
                 is >> ind;
                 //TODO: potential thread safety issue here
                 if (!is.fail()){
                     RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
-                    //os << ind << " ";
+                    os << ind << " ";
                     _vbOpenLoop.at(ind)=TorqueMode::OPEN_LOOP;
+                    _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(zerotorque);
+
+                    _velocity[ind]=0.0;
+                    //reset error since it is no longer tracked
+                    _error[ind]=0.0;
                 }
             }
-
             //TODO: decide on return vs os for error reporting
             return true;
         }
@@ -656,9 +656,12 @@ class ServoController : public ControllerBase
         virtual bool IsDone()
         {
             dReal Hinf=0;
-            FOREACH(it,_error){
-                dReal temp=abs(*it);
-                Hinf= Hinf > temp ? temp : Hinf;
+            for (int i = 0; i <_dofindices.size();i++){
+                //Only use closed-loop joints in evaluation
+                if (_vbOpenLoop[i]){
+                    dReal temp=abs(_error[i]);
+                    Hinf = Hinf > temp ? temp : Hinf;
+                }
             }
             return (Hinf>_tol);
         }
