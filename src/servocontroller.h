@@ -25,7 +25,6 @@ enum TorqueMode
 {
     CLOSED_LOOP,
     OPEN_LOOP,
-    HYBRID_MODE
 };
 
 class ServoController : public ControllerBase
@@ -55,9 +54,7 @@ class ServoController : public ControllerBase
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
         RegisterCommand("openloop",boost::bind(&ServoController::SetOpenLoopJoints,this,_1,_2),
-                "Set the given joint indices to open-loop torque control. Note: This command is not reversible in a given instance!");
-        RegisterCommand("hybridcontrol",boost::bind(&ServoController::SetHybridJoints,this,_1,_2),
-                "Set the given joint indices to \"hybrid\" torque control. This is purely a simulation hack. The joint's velocity motor is set to zero desired velocity, then the desired open-loop torque is added. This damps small joints like fingers when no open-loop torque is added. ");
+                "Set the given joint indices to open-loop torque control.");
     }
         virtual ~ServoController() {}
 
@@ -178,7 +175,6 @@ class ServoController : public ControllerBase
                         //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
                         break;
                     case OPEN_LOOP:
-                    case HYBRID_MODE:
                         _ref_pos[i]=values[i]*GetInputScale();
                         break;
                     default:
@@ -208,13 +204,13 @@ class ServoController : public ControllerBase
             std::vector<dReal> lower(100,0);
             std::vector<dReal> upper(100,0);
             
+            std::vector<dReal> tlimit(100,0);
             //Check all values by DOF to eliminate issues with multi-DOF joints
             _probot->GetDOFValues(_angle);
             _probot->GetDOFVelocityLimits(lower,upper,_dofindices);
+            _probot->GetDOFTorqueLimits(tlimit);
 
             std::vector<dReal> addedtorque(1,0);
-            std::vector<dReal> ql(1,0);
-            std::vector<dReal> qh(1,0);
 
             for (size_t i=0; i<_dofindices.size(); ++i) {
 
@@ -242,14 +238,13 @@ class ServoController : public ControllerBase
 
                         //If open loop, assume that PID control has no effect since motor toque is 0, so just add torque here.
                         break;
-                    case HYBRID_MODE: //Intentional fallthrough
-                        _velocity[i]=0.0;
                     case OPEN_LOOP:
+                        _velocity[i]=0.0;
                         //reset error since it is no longer tracked
                         _error[i]=0.0;
-                        //Assumes that vmotor torque is still set to zero.
-                        //Torque is proportional to distance from mean joint value for now
                         addedtorque[0]=_ref_pos[i];
+                        if (addedtorque[0] > tlimit[i]) addedtorque[0] = tlimit[i];
+                        else if (addedtorque[0] < -tlimit[i]) addedtorque[0] = -tlimit[i];
                         _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
                         break;
                     default:
@@ -636,11 +631,6 @@ class ServoController : public ControllerBase
          */
         bool SetOpenLoopJoints(std::ostream& os, std::istream& is)
         {
-            //Temporary vectors to store DOF torques for the exchange
-            //FIXME: This is NOT robust to changes in max torque outside of the controller.
-            std::vector<dReal> torque1(1,0);
-            std::vector<dReal> torque2(1,0);
-
             while (is.good()){
                 int ind=-1;
                 is >> ind;
@@ -649,31 +639,10 @@ class ServoController : public ControllerBase
                     RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
                     //os << ind << " ";
                     _vbOpenLoop.at(ind)=TorqueMode::OPEN_LOOP;
-                    torque1[0]=_doftorquelimits.at(ind);
-                    _probot->GetJointFromDOFIndex(ind)->GetTorqueLimits(torque2);
-                    _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(torque1);
-                    _doftorquelimits.at(ind)=torque2[0];
                 }
             }
 
             //TODO: decide on return vs os for error reporting
-            return true;
-        }
-
-        bool SetHybridJoints(std::ostream& os, std::istream& is)
-        {
-            std::vector<dReal> zerotorque(1,0);
-            while (is.good()){
-                int ind=-1;
-                is >> ind;
-
-                if (!is.fail()){
-                    RAVELOG_DEBUG("Setting joint %d to hybrid\n",ind);
-                    _vbOpenLoop.at(ind)=TorqueMode::HYBRID_MODE;
-                }
-            }
-            //TODO: decide on return vs os for error reporting
-            os << true;
             return true;
         }
 
