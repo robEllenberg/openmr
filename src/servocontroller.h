@@ -21,6 +21,13 @@
 // Time vector
 typedef std::vector<dReal> tvector;
 
+enum TorqueMode 
+{
+    CLOSED_LOOP,
+    OPEN_LOOP,
+    HYBRID_MODE
+};
+
 class ServoController : public ControllerBase
 {
     public:
@@ -48,8 +55,9 @@ class ServoController : public ControllerBase
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
         RegisterCommand("openloop",boost::bind(&ServoController::SetOpenLoopJoints,this,_1,_2),
-                "Set the given joint indices to open-loop torque control.");
-
+                "Set the given joint indices to open-loop torque control. Note: This command is not reversible in a given instance!");
+        RegisterCommand("hybridcontrol",boost::bind(&ServoController::SetHybridJoints,this,_1,_2),
+                "Set the given joint indices to \"hybrid\" torque control. This is purely a simulation hack. The joint's velocity motor is set to zero desired velocity, then the desired open-loop torque is added. This damps small joints like fingers when no open-loop torque is added. ");
     }
         virtual ~ServoController() {}
 
@@ -81,6 +89,7 @@ class ServoController : public ControllerBase
             _phi_tvec.resize(_dofindices.size());
             _ref_tvec.resize(_dofindices.size());
             _vbOpenLoop.resize(_dofindices.size());
+            _doftorquelimits.resize(_dofindices.size());
             _vTorqueJoints.resize(_dofindices.size());
 
             //Updated to standard RAVE logging function
@@ -126,6 +135,7 @@ class ServoController : public ControllerBase
             _Kf=.9998;
             _Ka=.1;
             _limitpad=.03;
+            _tol=0.01;
 
         }
 
@@ -144,25 +154,36 @@ class ServoController : public ControllerBase
             std::vector<dReal> upper(_dofindices.size());
             _probot->GetDOFLimits(lower,upper);
 
-            if ( values.size() < _ref_pos.size())
+            if ( values.size() < _dofindices.size())
             {
                 RAVELOG_WARN("Not enough values, %d < %d, ignoring...\n",values.size(),_ref_pos.size());
                 return false;
             }
 
             dReal pos;
-            for(size_t i = 0; i < _ref_pos.size(); ++i) {
+            for(size_t i = 0; i < _dofindices.size(); ++i) {
 
                 //CHANGE: All commands are in radians now
-                pos=values[i]*GetInputScale();
+                switch (_vbOpenLoop.at(i))
+                {
+                    case CLOSED_LOOP:
+                        pos=values[i]*GetInputScale();
 
-                //TODO obviously this will not work for joints with a ROM smaller
-                //than 2*_limitpad. Shouldn't be an issue, but future releases
-                //will fix it.
-                if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
-                else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
-                else _ref_pos[i]=pos;
-                //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
+                        //TODO obviously this will not work for joints with a ROM smaller
+                        //than 2*_limitpad. Shouldn't be an issue, but future releases
+                        //will fix it.
+                        if ((lower[i]+_limitpad)>pos) _ref_pos[i]=lower[i]+_limitpad;
+                        else if ((upper[i]-_limitpad)<pos) _ref_pos[i]=upper[i]-_limitpad;
+                        else _ref_pos[i]=pos;
+                        //RAVELOG_DEBUG("Servo %d Position: %f\n",i,_ref_pos[i]);
+                        break;
+                    case OPEN_LOOP:
+                    case HYBRID_MODE:
+                        _ref_pos[i]=values[i]*GetInputScale();
+                        break;
+                    default:
+                        break;
+                }
             }
 
             return true;
@@ -197,34 +218,43 @@ class ServoController : public ControllerBase
 
             for (size_t i=0; i<_dofindices.size(); ++i) {
 
-                //TODO: (low) Fix this to handle joint DOF varieties properly
-                // Potential slowdown due to dynamic resizing of array?
-                //TODO: Add error saturation to limit windup
-                error = _ref_pos[i] - _angle[i];
+                switch (_vbOpenLoop[i])
+                {
+                    case CLOSED_LOOP:
+                        error = _ref_pos[i] - _angle[i];
 
-                // find dError / dt and low-pass filter the data with hard-coded alpha
-                derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
+                        // find dError / dt and low-pass filter the data with hard-coded alpha
+                        derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
 
-                // Calculate decaying integration
-                _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
+                        // Calculate decaying integration
+                        _errSum[i] = error*fTimeElapsed + _errSum[i]*_Kf;
 
-                rawcmd = error*_KP[i] + derror*_KD[i] + _errSum[i]*_KI[i]; 
+                        rawcmd = error*_KP[i] + derror*_KD[i] + _errSum[i]*_KI[i]; 
 
-                if (rawcmd > upper[i]) satcmd = upper[i];
-                else if (rawcmd < lower[i]) satcmd = lower[i];
-                else satcmd=rawcmd;
-                _velocity[i]=satcmd;
+                        if (rawcmd > upper[i]) satcmd = upper[i];
+                        else if (rawcmd < lower[i]) satcmd = lower[i];
+                        else satcmd=rawcmd;
+                        _velocity[i]=satcmd;
 
-                // Update error history with new scratch value
-                _error[i] = error;
-                _dError[i] = derror;
+                        // Update error history with new scratch value
+                        _error[i] = error;
+                        _dError[i] = derror;
 
-                //If open loop, assume that PID control has no effect since motor toque is 0, so just add torque here.
-                if (_vbOpenLoop[i])
-                    _probot->GetJointFromDOFIndex(i)->GetLimits(ql,qh);
-                    //Torque is proportional to distance from mean joint value for now
-                    addedtorque[0]=_ref_pos[i]-(qh[0]+ql[0])/2.0;
-                    _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
+                        //If open loop, assume that PID control has no effect since motor toque is 0, so just add torque here.
+                        break;
+                    case HYBRID_MODE: //Intentional fallthrough
+                        _velocity[i]=0.0;
+                    case OPEN_LOOP:
+                        //reset error since it is no longer tracked
+                        _error[i]=0.0;
+                        //Assumes that vmotor torque is still set to zero.
+                        //Torque is proportional to distance from mean joint value for now
+                        addedtorque[0]=_ref_pos[i];
+                        _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
+                        break;
+                    default:
+                        break;
+                }
             }
 
             //Check for record flag and copy DOF values into storage if necessary
@@ -606,15 +636,40 @@ class ServoController : public ControllerBase
          */
         bool SetOpenLoopJoints(std::ostream& os, std::istream& is)
         {
+            //Temporary vectors to store DOF torques for the exchange
+            //FIXME: This is NOT robust to changes in max torque outside of the controller.
+            std::vector<dReal> torque1(1,0);
+            std::vector<dReal> torque2(1,0);
+
+            while (is.good()){
+                int ind=-1;
+                is >> ind;
+                //TODO: potential thread safety issue here
+                if (!is.fail()){
+                    RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
+                    //os << ind << " ";
+                    _vbOpenLoop.at(ind)=TorqueMode::OPEN_LOOP;
+                    torque1[0]=_doftorquelimits.at(ind);
+                    _probot->GetJointFromDOFIndex(ind)->GetTorqueLimits(torque2);
+                    _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(torque1);
+                    _doftorquelimits.at(ind)=torque2[0];
+                }
+            }
+
+            //TODO: decide on return vs os for error reporting
+            return true;
+        }
+
+        bool SetHybridJoints(std::ostream& os, std::istream& is)
+        {
             std::vector<dReal> zerotorque(1,0);
             while (is.good()){
                 int ind=-1;
                 is >> ind;
 
                 if (!is.fail()){
-                    RAVELOG_DEBUG("Setting joint %d to open loop\n",ind);
-                    _vbOpenLoop.at(ind)=true;
-                    _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(zerotorque);
+                    RAVELOG_DEBUG("Setting joint %d to hybrid\n",ind);
+                    _vbOpenLoop.at(ind)=TorqueMode::HYBRID_MODE;
                 }
             }
             //TODO: decide on return vs os for error reporting
@@ -622,9 +677,21 @@ class ServoController : public ControllerBase
             return true;
         }
 
+        /**
+         * Return the H-inf norm of joint error.
+         * The control command can be considered "completed" when all joints
+         * are within a tolerance of the reference position. Future methods may
+         * include a "settling" requirement to ensure that it is not due to
+         * coincidence.
+         */
         virtual bool IsDone()
         {
-            return false;
+            dReal Hinf=0;
+            FOREACH(it,_error){
+                dReal temp=abs(*it);
+                Hinf= Hinf > temp ? temp : Hinf;
+            }
+            return (Hinf>_tol);
         }
 
         virtual dReal GetTime() const
@@ -773,6 +840,7 @@ class ServoController : public ControllerBase
         // This is a bandaid fix...
         dReal _limitpad;
         dReal _time;
+        dReal _tol;
 
         // For recording....
         ofstream outFile;                 // Stream file for storing the servo positions
@@ -780,7 +848,8 @@ class ServoController : public ControllerBase
         std::vector<tvector> _phi_tvec;     // Servo's angles in time
         std::vector<tvector> _ref_tvec;     // Servo's reference positions in time
         UserDataPtr _callback;
-        std::vector<bool> _vbOpenLoop;
+        std::vector<TorqueMode> _vbOpenLoop;
+        std::vector<dReal> _doftorquelimits;
         std::vector<OpenRAVE::KinBody::JointPtr> _vTorqueJoints;
 
 };
