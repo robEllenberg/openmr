@@ -279,7 +279,10 @@ class ServoController : public ControllerBase
             while (is.good()){
                 is >> cmd2;
                 //Note: old gain-setting interface
-                if ( cmd2 == "gains") {
+                if ( cmd2 == "pos1"){
+                    return SetPos1(os,is);
+                }
+                else if ( cmd2 == "gains") {
                     //Pass stream through to setgains command
                     os << SetGains(os,is);  
                 }
@@ -352,6 +355,9 @@ class ServoController : public ControllerBase
             }
             else if (cmd2 == "units" ) 
                 os << (_inradians ? "radians" : "degrees");
+            else if (cmd2 == "pos1" ){
+                return GetPos1(os,is);
+            }
             else {
                 RAVELOG_WARN("Command not recognized");
                 return false;

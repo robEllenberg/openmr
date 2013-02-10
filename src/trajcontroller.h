@@ -24,6 +24,7 @@ class TrajectoryController : public ControllerBase
     {
         __description = "Trajectory controller based on Sinusoidal oscillator by Juan Gonzalez-Gomez";
         RegisterCommand("set",boost::bind(&TrajectoryController::SetProperties,this,_1,_2),"Format: set property value\n Use this command to set miscellaneous properties, such as the interpolation direction (forward / reverse), trajectory recording, etc.");
+        RegisterCommand("get",boost::bind(&TrajectoryController::GetProperties,this,_1,_2),"Format: get property value\n Use this command to get miscellaneous properties, such as the interpolation direction (forward / reverse), trajectory recording, etc.");
         RegisterCommand("load",boost::bind(&TrajectoryController::DeserializeTrajectory,this,_1,_2),"Format: load <serialized trajectory>\n Pass in an entire serialized trajectory and load it into the controller.");
         RegisterCommand("start",boost::bind(&TrajectoryController::StartController,this,_1,_2),"Format: start\n Start sampling and executing the loaded trajectory.");
         RegisterCommand("stop",boost::bind(&TrajectoryController::StopController,this,_1,_2),"Format: stop\n Stop a running controller (may eventually include a time reset).");
@@ -170,6 +171,30 @@ class TrajectoryController : public ControllerBase
 
                     //Pass stream through to servocontroller directly
                     is2 << "set" << " " << cmd2 << " " << is.rdbuf();
+                    _pservocontroller->SendCommand(os,is2);  
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        bool GetProperties(std::ostream& os, std::istream& is)
+        {
+            string cmd2;
+            while (is){
+                is >> cmd2;
+                if ( cmd2 == "timestep") {
+                    return _timestep;
+                }
+                else if ( cmd2 == "freq" ) {
+                    return 1.0/_timestep;
+                }
+                //Pass any other commands through to the servocontroller
+                else {
+                    std::stringstream is2;
+
+                    //Pass stream through to servocontroller directly
+                    is2 << "get" << " " << cmd2 << " " << is.rdbuf();
                     _pservocontroller->SendCommand(os,is2);  
                     return true;
                 }
