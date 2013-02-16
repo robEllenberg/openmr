@@ -94,7 +94,7 @@ using namespace OpenRAVE;
 #include "mimiccontroller.h"
 
 #ifdef BUILD_ACHCONTROLLER
-#include "achcontroller.h"
+#include "achread.h"
 #endif
 
 #endif

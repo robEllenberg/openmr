@@ -34,8 +34,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "mimiccontroller" )
             return InterfaceBasePtr(new MimicController(penv,sinput));
 #ifdef BUILD_ACHCONTROLLER
-        else if( interfacename == "achcontroller" )
-            return InterfaceBasePtr(new ACHController(penv,sinput));
+        else if( interfacename == "achreadcontroller" )
+            return InterfaceBasePtr(new ACHReadController(penv,sinput));
 #endif
         break;
     default:
@@ -52,7 +52,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Controller].push_back("TrajectoryController");
     info.interfacenames[PT_Controller].push_back("MimicController");
 #ifdef BUILD_ACHCONTROLLER
-    info.interfacenames[PT_Controller].push_back("ACHController");
+    info.interfacenames[PT_Controller].push_back("ACHReadController");
 #endif
 }
 

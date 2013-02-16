@@ -26,7 +26,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 // for hubo
+
 #include "hubo.hpp"
+#include "ach.h"
+#include <sys/mman.h>
 
 // Priority
 #define MY_PRIORITY (49)/* we use 49 as the PRREMPT_RT use 50

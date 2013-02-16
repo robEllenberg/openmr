@@ -25,20 +25,21 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OPENRAVE_ACHCONTROLLER_H
-#define OPENRAVE_ACHCONTROLLER_H
+#ifndef OPENRAVE_ACHREADCONTROLLER_H
+#define OPENRAVE_ACHREADCONTROLLER_H
 
 #include <math.h>
 #include "ach-setup.h"
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
+#include <openrave/openrave.h>
 
 
-class ACHController : public ControllerBase
+class ACHReadController : public ControllerBase
 {
 public:
-    ACHController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bRecording(false)
+    ACHReadController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bRecording(false)
     {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
@@ -46,26 +47,24 @@ If \ref ControllerBase::SetPath is called and the trajectory finishes, then the 
 2. ControllerBase::SetDesired is called.\n\n\
 3. ControllerBase::Reset is called resetting everything\n\n\
 If SetDesired is called, only joint values will be set at every timestep leaving the transformation alone.\n";
-        RegisterCommand("Pause",boost::bind(&ACHController::_Pause,this,_1,_2),
+        RegisterCommand("Pause",boost::bind(&ACHReadController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
-        RegisterCommand("SetCheckCollisions",boost::bind(&ACHController::_SetCheckCollisions,this,_1,_2),
+        RegisterCommand("SetCheckCollisions",boost::bind(&ACHReadController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
-        RegisterCommand("SetThrowExceptions",boost::bind(&ACHController::_SetThrowExceptions,this,_1,_2),
+        RegisterCommand("SetThrowExceptions",boost::bind(&ACHReadController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
-        RegisterCommand("SetRecord",boost::bind(&ACHController::SetRecord,this,_1,_2),
+        RegisterCommand("SetRecord",boost::bind(&ACHReadController::SetRecord,this,_1,_2),
                         "Enable / disable recording. Format is:\n\n [T/F] [filename]");
-        RegisterCommand("SetReadOnly",boost::bind(&ACHController::SetReadOnly,this,_1,_2),
-                        "Choose read-only mode to playback. Format is:\n\n [0/1]");
-        RegisterCommand("SetRefRobot",boost::bind(&ACHController::SetRefRobot,this,_1,_2),
+        RegisterCommand("SetRefRobot",boost::bind(&ACHReadController::SetRefRobot,this,_1,_2),
                         "Set the reference mimic robot ");
-        RegisterCommand("SetCmdRobot",boost::bind(&ACHController::SetCmdRobot,this,_1,_2),
+        RegisterCommand("SetCmdRobot",boost::bind(&ACHReadController::SetCmdRobot,this,_1,_2),
                         "Set the command mimic robot ");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
         _vsendtimes.resize(0);
     }
-    virtual ~ACHController() {
+    virtual ~ACHReadController() {
     }
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
@@ -80,7 +79,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             if( !flog ) {
                 RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
             }
-            //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
+
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofcircular.resize(0);
@@ -88,7 +87,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&ACHController::_SetJointLimits,boost::bind(&utils::sptr_from<ACHController>, weak_controller())));
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&ACHReadController::_SetJointLimits,boost::bind(&utils::sptr_from<ACHReadController>, weak_controller())));
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
@@ -97,7 +96,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _gjointvalues->dof = _dofindices.size();
                 stringstream ss;
                 ss << "joint_values " << _probot->GetName();
-                FOREACHC(it, _dofindices) {
+                FOREACH(it, _dofindices) {
                     ss << " " << *it;
                 }
                 _gjointvalues->name = ss.str();
@@ -110,7 +109,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
         }
         _bPause = false;
-        _bReadOnly = true;
 
         _vecstate.resize(_dofindices.size());
         _vecref.resize(_dofindices.size());
@@ -151,120 +149,13 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans)
     {
-        if( values.size() != _dofindices.size() ) {
-            throw openrave_exception(str(boost::format("wrong desired dimensions %d!=%d")%values.size()%_dofindices.size()),ORE_InvalidArguments);
-        }
-        _fCommandTime = 0;
-        _ptraj.reset();
-        // do not set done to true here! let it be picked up by the simulation thread.
-        // this will also let it have consistent mechanics as SetPath
-        // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
-        if( !_bPause ) {
-            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
-            _vecdesired = values;
-            if( _nControlTransformation ) {
-                if( !!trans ) {
-                    _tdesired = *trans;
-                }
-                else {
-                    _tdesired = _probot->GetTransform();
-                }
-                _SetDOFValues(_vecdesired,_tdesired,0);
-            }
-            else {
-                _SetDOFValues(_vecdesired,0);
-            }
-            _bIsDone = false;     // set after _vecdesired has changed
-        }
-        return true;
+        return false;
     }
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
-        OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
-        boost::mutex::scoped_lock lock(_mutex);
-        if( _bPause ) {
-            RAVELOG_DEBUG("ACHController cannot start trajectories when paused\n");
-            _ptraj.reset();
-            _bIsDone = true;
-            return false;
-        }
-        _fCommandTime = 0;
-        _bIsDone = true;
-        _vecdesired.resize(0);
-
-        if( !!ptraj ) {
-            _samplespec._vgroups.resize(0);
-            _bTrajHasJoints = !!_gjointvalues && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            if( _bTrajHasJoints ) {
-                _samplespec._vgroups.push_back(*_gjointvalues);
-            }
-            _bTrajHasTransform = !!_gtransform && ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
-            if( _bTrajHasTransform ) {
-                _samplespec._vgroups.push_back(*_gtransform);
-            }
-            _samplespec.ResetGroupOffsets();
-            _vgrablinks.resize(0);
-            _vgrabbodylinks.resize(0);
-            int dof = _samplespec.GetDOF();
-            FOREACHC(itgroup,ptraj->GetConfigurationSpecification()._vgroups) {
-                if( itgroup->name.size()>=8 && itgroup->name.substr(0,8) == "grabbody") {
-                    stringstream ss(itgroup->name);
-                    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                    if( itgroup->dof == 1 && tokens.size() >= 4 ) {
-                        if( tokens.at(2) == _probot->GetName() ) {
-                            KinBodyPtr pbody = GetEnv()->GetKinBody(tokens.at(1));
-                            if( !!pbody ) {
-                                _samplespec._vgroups.push_back(*itgroup);
-                                _samplespec._vgroups.back().offset = dof;
-                                _vgrabbodylinks.push_back(GrabBody(dof,boost::lexical_cast<int>(tokens.at(3)), pbody));
-                            }
-                            dof += _samplespec._vgroups.back().dof;
-                        }
-                    }
-                    else {
-                        RAVELOG_WARN(str(boost::format("robot %s invalid grabbody tokens: %s")%_probot->GetName()%ss.str()));
-                    }
-                }
-                else if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
-                    stringstream ss(itgroup->name);
-                    std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                    if( tokens.size() >= 2 && tokens[1] == _probot->GetName() ) {
-                        _samplespec._vgroups.push_back(*itgroup);
-                        _samplespec._vgroups.back().offset = dof;
-                        for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
-                        }
-                        dof += _samplespec._vgroups.back().dof;
-                    }
-                    else {
-                        RAVELOG_WARN(str(boost::format("robot %s invalid grab tokens: %s")%_probot->GetName()%ss.str()));
-                    }
-                }
-            }
-            BOOST_ASSERT(_samplespec.IsValid());
-
-            // see if at least one point can be sampled, this make it easier to debug bad trajectories
-            vector<dReal> v;
-            ptraj->Sample(v,0,_samplespec);
-            if( _bTrajHasTransform ) {
-                Transform t;
-                _samplespec.ExtractTransform(t,v.begin(),_probot);
-            }
-
-            if( !!flog ) {
-                ptraj->serialize(flog);
-            }
-
-            _ptraj = RaveCreateTrajectory(GetEnv(),ptraj->GetXMLId());
-            _ptraj->Clone(ptraj,0);
-            _bIsDone = false;
-        }
-        //Reset initial time based on RT clock
-        //clock_gettime(CLOCK_REALTIME,&_t);
-        //TODO: test if this is overkill?
-
-        return true;
+        _bIsDone=false;
+        return false;
     }
 
     virtual void SimulationStep(dReal fTimeElapsed)
@@ -277,104 +168,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _GetACH(_veccmd,_vecref, _vecstate);
        
         boost::mutex::scoped_lock lock(_mutex);
-        TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
-
-        if( !!ptraj ) 
-        {
-            vector<dReal> sampledata;
-            ptraj->Sample(sampledata,_fCommandTime,_samplespec);
-
-            // already sampled, so change the command times before before setting values
-            // incase the below functions fail
-            if( _fCommandTime > ptraj->GetDuration() ) {
-                _fCommandTime = ptraj->GetDuration();
-                _bIsDone = true;
-            }
-            else {
-                _fCommandTime += _fSpeed * fTimeElapsed;
-            }
-
-            // first process all grab info
-            list<KinBodyPtr> listrelease;
-            list<pair<KinBodyPtr, KinBody::LinkPtr> > listgrab;
-            FOREACH(itgrabinfo,_vgrablinks) {
-                int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
-                if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
-                    if( !pbody ) {
-                        RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
-                        continue;
-                    }
-                    if( bodyid < 0 ) {
-                        if( !!_probot->IsGrabbing(pbody) ) {
-                            listrelease.push_back(pbody);
-                        }
-                    }
-                    else {
-                        KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(pbody);
-                        if( !!pgrabbinglink ) {
-                            if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
-                                listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
-                            }
-                        }
-                        else {
-                            listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
-                        }
-                    }
-                }
-            }
-
-            FOREACH(itgrabinfo,_vgrabbodylinks) {
-                int dograb = int(std::floor(sampledata.at(itgrabinfo->offset)+0.5));
-                if( dograb <= 0 ) {
-                    if( !!_probot->IsGrabbing(itgrabinfo->pbody) ) {
-                        listrelease.push_back(itgrabinfo->pbody);
-                    }
-                }
-                else {
-                    KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(itgrabinfo->pbody);
-                    if( !!pgrabbinglink ) {
-                        if( pgrabbinglink->GetIndex() != itgrabinfo->robotlinkindex ) {
-                            listrelease.push_back(itgrabinfo->pbody);
-                            listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
-                        }
-                    }
-                    else {
-                        listgrab.push_back(make_pair(itgrabinfo->pbody,_probot->GetLinks().at(itgrabinfo->robotlinkindex)));
-                    }
-                }
-            }
-
-            vector<dReal> vdofvalues;
-            //TODO: Make the visualization consistent. Trajectory sampling should be sent to the command channel.
-            if( _bTrajHasJoints && _dofindices.size() > 0 ) {
-                vdofvalues.resize(_dofindices.size());
-                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
-            }
-
-            Transform t;
-            if( _bTrajHasTransform && _nControlTransformation ) {
-                _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
-                if( vdofvalues.size() > 0 ) {
-                    _SetDOFValues(vdofvalues,t, _fCommandTime > 0 ? fTimeElapsed : 0);
-                }
-                else {
-                    _probot->SetTransform(t);
-                }
-            }
-            else if( vdofvalues.size() > 0 ) {
-                _SetDOFValues(vdofvalues, _fCommandTime > 0 ? fTimeElapsed : 0);
-            }
-
-            // always release after setting dof values
-            FOREACH(itbody,listrelease) {
-                _probot->Release(*itbody);
-            }
-            FOREACH(it,listgrab) {
-                _probot->Grab(it->first,it->second);
-            }
-        }
 
         _SetDOFValues(_vecstate, 0);
 
@@ -387,12 +180,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _pcmdrobot->GetController()->SetDesired(_veccmd,trans);
             }
         }
-
-
-        // Finally, send values to ref channel if not read-only
-        if (!_bReadOnly) 
-            //TODO: Figure out how do to error checking here
-            _SendACHReferences(_vecdesired); 
     }
 
     virtual bool IsDone() {
@@ -422,14 +209,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _WriteTimeDataToFile();
             _outFile.close();
         }
-        return true;
-    }
-
-    bool SetReadOnly(std::ostream& os, std::istream& is)
-    {
-        is >> _bReadOnly;
-        if (_bReadOnly)  RAVELOG_INFO("Reading input from hubo-ref channel\n");
-        else  RAVELOG_INFO("Writing input to hubo-ref channel\n");
         return true;
     }
 
@@ -484,13 +263,13 @@ private:
         return !!is;
     }
 
-    inline boost::shared_ptr<ACHController> shared_controller() {
-        return boost::dynamic_pointer_cast<ACHController>(shared_from_this());
+    inline boost::shared_ptr<ACHReadController> shared_controller() {
+        return boost::dynamic_pointer_cast<ACHReadController>(shared_from_this());
     }
-    inline boost::shared_ptr<ACHController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<ACHController const>(shared_from_this());
+    inline boost::shared_ptr<ACHReadController const> shared_controller_const() const {
+        return boost::dynamic_pointer_cast<ACHReadController const>(shared_from_this());
     }
-    inline boost::weak_ptr<ACHController> weak_controller() {
+    inline boost::weak_ptr<ACHReadController> weak_controller() {
         return shared_controller();
     }
 
@@ -501,42 +280,6 @@ private:
             _probot->GetDOFVelocityLimits(_vupper[1]);
             _probot->GetDOFAccelerationLimits(_vupper[2]);
         }
-    }
-
-    void _SendACHReferences( const vector<dReal> &values)
-    {
-        // Get latest ACH message (why? this assumes that we are the only controller updating the ref,
-        // and if we're not, then this is a totally unsafe way to update (need mutexes or something).
-        size_t fs;
-        ach_status_t r = (ach_status_t) ach_get( &(_ach.hubo_ref), &H_ref, sizeof(H_ref), &fs, NULL, ACH_O_LAST );
-        if(r != ACH_OK) {
-            //RAVELOG_VERBOSE("Ref r = %s\n",ach_result_to_string(r));
-        }
-        else   assert( sizeof(H_ref) == fs ); 
-
-        r = (ach_status_t) ach_get( &(_ach.hubo_state), &H_state, sizeof(H_state), &fs, NULL, ACH_O_LAST );
-
-        if(r != ACH_OK) {
-            //RAVELOG_VERBOSE("State r = %s\n",ach_result_to_string(r));
-        }
-        else   assert( sizeof(H_state) == fs ); 
-
-        //TODO: Test that all controllable joints map correctly
-        //TODO: Important! Check for limit violations here?
-        for (size_t i = 0;i<_dofindices.size();++i){
-            size_t dof = _dofindices[i];
-            if ((*_pjointmap)[dof] >= 0) H_ref.ref[(*_pjointmap)[dof]]=values[dof];
-        }
-        struct timespec tnew;
-        clock_gettime( CLOCK_REALTIME, &tnew);
-        ach_put( &(_ach.hubo_ref), &H_ref, sizeof(H_ref));
-        //crude way to force high significant digits)
-        /*RAVELOG_DEBUG("%12.12f %12.12f \n",
-          (double)Hubo::ts_diff(&tnew,&_t)/(double)NSEC_PER_SEC,
-          H_ref.ref[Hubo::name2jmc["LHP"]]);
-          */
-        if (_bRecording) _vsendtimes.push_back(Hubo::ts_diff(&tnew,&_t));
-
     }
 
     void _GetACH( vector<dReal> &cmd, vector<dReal> &ref,vector<dReal> &enc)
@@ -715,8 +458,8 @@ private:
     Hubo::DirectJointMapPtr _pjointmap;
 };
 
-ControllerBasePtr CreateACHController(EnvironmentBasePtr penv, std::istream& sinput)
+ControllerBasePtr CreateACHReadController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new ACHController(penv,sinput));
+    return ControllerBasePtr(new ACHReadController(penv,sinput));
 }
 #endif
