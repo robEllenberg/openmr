@@ -110,7 +110,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
         }
         _bPause = false;
-        _bReadOnly = false;
+        _bReadOnly = true;
 
         _vecstate.resize(_dofindices.size());
         _vecref.resize(_dofindices.size());

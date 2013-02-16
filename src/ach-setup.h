@@ -24,51 +24,9 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <time.h>
-
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <string.h>
-#include <stdio.h>
-
-// for timer
-#include <time.h>
-#include <sched.h>
-#include <sys/io.h>
-#include <unistd.h>
-
-// for RT
-#include <stdlib.h>
-#include <sys/mman.h>
 
 // for hubo
 #include "hubo.hpp"
-
-// for ach
-#include <errno.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <ctype.h>
-#include <stdbool.h>
-#include <math.h>
-#include <inttypes.h>
-#include "ach.h"
-#include <openrave/openrave.h>
-
-/* At time of writing, these constants are not defined in the headers */
-#ifndef PF_CAN
-#define PF_CAN 29
-#endif
-
-#ifndef AF_CAN
-#define AF_CAN PF_CAN
-#endif
 
 // Priority
 #define MY_PRIORITY (49)/* we use 49 as the PRREMPT_RT use 50
@@ -81,10 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Timing info
 #define NSEC_PER_SEC    1000000000
-
-#ifndef _HUBO_ACH_NAMESPACE_
-#define _HUBO_ACH_NAMESPACE_
-
 
 namespace Hubo{
 
@@ -173,4 +127,3 @@ namespace Hubo{
         }
 
 }
-#endif
