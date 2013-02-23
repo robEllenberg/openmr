@@ -29,6 +29,7 @@ class TrajectoryController : public ControllerBase
         RegisterCommand("start",boost::bind(&TrajectoryController::StartController,this,_1,_2),"Format: start\n Start sampling and executing the loaded trajectory.");
         RegisterCommand("stop",boost::bind(&TrajectoryController::StopController,this,_1,_2),"Format: stop\n Stop a running controller (may eventually include a time reset).");
         RegisterCommand("pause",boost::bind(&TrajectoryController::PauseController,this,_1,_2),"Format: pause\n Pause a running controller, preserving the trajectory state.");
+        RegisterCommand("openloop",boost::bind(&TrajectoryController::SetOpenLoop,this,_1,_2),"Format: openloop j0 j1 ...\n Set joint axes to open loop mode");
 
     }
         virtual ~TrajectoryController() {}
@@ -235,6 +236,14 @@ class TrajectoryController : public ControllerBase
         bool PauseController(std::ostream& os, std::istream& is){
             _running=false;
             return true;
+        }
+
+        bool SetOpenLoop(std::ostream& os, std::istream& is){
+            std::stringstream is2;
+
+            //Pass stream through to servocontroller directly
+            is2 << "openloop " << is.rdbuf();
+            return _pservocontroller->SendCommand(os,is2); 
         }
 
         virtual bool IsDone()
