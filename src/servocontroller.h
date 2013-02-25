@@ -55,12 +55,14 @@ class ServoController : public ControllerBase
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
                 "Return controller properties as string.");
-        RegisterCommand("openloop",boost::bind(&ServoController::SetControlParam,this,_1,_2,ControlParam::DIRECT_TORQUE),
-                "Set the given joint indices to open-loop torque control.");
-        RegisterCommand("directpid",boost::bind(&ServoController::SetControlParam,this,_1,_2,ControlParam::DIRECT_PID),
-                "Set the given joint indices to PID control using directly applied torque (vs. ODE velocity motors)");
-        RegisterCommand("springdamper",boost::bind(&ServoController::SetControlParam,this,_1,_2,ControlParam::PASSIVE),
-                "Set the given joint to behave passively, as if connected to a spring / damper with constants kp and kd");
+        RegisterCommand("directtorque",boost::bind(&ServoController::SetControlParam,this,_1,_2,DIRECT_TORQUE),
+                "Set the given joints to open-loop torque control.");
+        RegisterCommand("directpid",boost::bind(&ServoController::SetControlParam,this,_1,_2,DIRECT_PID),
+                "Set the given joints to PID control using directly applied torque");
+        RegisterCommand("springdamper",boost::bind(&ServoController::SetControlParam,this,_1,_2,PASSIVE),
+                "Set the given joints to behave passively, as if connected to a spring / damper with constants kp and kd");
+        RegisterCommand("closedloop",boost::bind(&ServoController::SetControlParam,this,_1,_2,CLOSED_LOOP),
+                "Set the given joints to PID control with ODE velocity motors");
     }
         virtual ~ServoController() {}
 
@@ -217,13 +219,13 @@ class ServoController : public ControllerBase
 
             std::vector<dReal> lower(100,0);
             std::vector<dReal> upper(100,0);
-            std::vector<dReal> velocities(100,0);
+            std::vector<dReal> dofvelocities(100,0);
             
             std::vector<dReal> tlimit(100,0);
             //Check all values by DOF to eliminate issues with multi-DOF joints
             //TODO: is this bulk copying actually more efficient?
             _probot->GetDOFValues(_angle);
-            _probot->GetDOFVelocities(velocities);
+            _probot->GetDOFVelocities(dofvelocities);
             _probot->GetDOFVelocityLimits(lower,upper,_dofindices);
 
             _probot->GetDOFTorqueLimits(tlimit);
@@ -254,15 +256,20 @@ class ServoController : public ControllerBase
                 }
                 else{
                     cmd = _ref_pos[i];
-                    _velocity[i]=0.0;
+                    _velocity[i]=dofvelocities[i];
                 }
-
 
                 if (_vControlMode[i] & DIRECT_TORQUE)
                 {
                     addedtorque[0]=sat(cmd,-_doftorquelimits[i],_doftorquelimits[i]);
                     _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
                 }
+                else if (_vControlMode[i] == PASSIVE){
+                    //Note that error is used instead of zero so that the spring origin can be set with _ref_pos
+                    addedtorque[0] = sat(error*_KP[i] - dofvelocities[i]*_KD[i],-_doftorquelimits[i],_doftorquelimits[i]);
+                    _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
+                }
+
             }
 
             //Check for record flag and copy DOF values into storage if necessary
@@ -652,7 +659,7 @@ class ServoController : public ControllerBase
         }
 
         /**
-         * Set control mode for a given set of joitns.
+         * Set control mode for a given set of joints.
          * Use this function to enable or disable direct torque control, passive mode, etc.
          */
         bool SetControlParam(std::ostream& os, std::istream& is, ControlParam mode)
