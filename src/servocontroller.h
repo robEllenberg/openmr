@@ -234,9 +234,9 @@ class ServoController : public ControllerBase
 
             for (size_t i=0; i<_dofindices.size(); ++i) {
 
+                error = _ref_pos[i] - _angle[i];
                 if (_vControlMode[i] & CLOSED_LOOP)
                 {
-                    error = _ref_pos[i] - _angle[i];
 
                     // find dError / dt and low-pass filter the data with hard-coded alpha
                     derror = (error - _error[i])/fTimeElapsed*_Ka+_dError[i]*(1-_Ka);
@@ -256,7 +256,8 @@ class ServoController : public ControllerBase
                 }
                 else{
                     cmd = _ref_pos[i];
-                    _velocity[i]=dofvelocities[i];
+                    //Make desired velocity zero
+                    _velocity[i]=0;
                 }
 
                 if (_vControlMode[i] & DIRECT_TORQUE)
@@ -266,8 +267,10 @@ class ServoController : public ControllerBase
                 }
                 else if (_vControlMode[i] == PASSIVE){
                     //Note that error is used instead of zero so that the spring origin can be set with _ref_pos
+                    
                     addedtorque[0] = sat(error*_KP[i] - dofvelocities[i]*_KD[i],-_doftorquelimits[i],_doftorquelimits[i]);
                     _probot->GetJointFromDOFIndex(i)->AddTorque(addedtorque);
+                    //RAVELOG_DEBUG("Jnt %d: vel = %f, T_applied = %f\n",i,dofvelocities[i],addedtorque[0]);
                 }
 
             }
@@ -654,7 +657,7 @@ class ServoController : public ControllerBase
                 outFile.close();
             }
 
-            RAVELOG_INFO("RECORD off");
+            RAVELOG_INFO("RECORD off\n");
             return true;
         }
 
@@ -683,14 +686,15 @@ class ServoController : public ControllerBase
                         continue;
 
                     _vControlMode.at(ind)=mode;
+                    RAVELOG_DEBUG("Setting joint %d to mode %d\n",ind,mode);
                     //KLUDGE: effectively a state machine but without the neat implementation
-                    if ((mode & !oldmode) & DIRECT_TORQUE){
+                    if (mode !=CLOSED_LOOP){
                         //Switching into a direct torque mode, need to store motor torques
                         _doftorquelimits[ind]=tlimit[ind];
                         RAVELOG_DEBUG("Jnt %d: Stored torque limit is %f\n",ind,_doftorquelimits[ind]);
                         _probot->GetJointFromDOFIndex(ind)->SetTorqueLimits(zerotorque);
                     }
-                    else if ((!mode & oldmode) & DIRECT_TORQUE){
+                    else {
                         //Switching out of a direct torque mode, retrieve and re-set vmotor torque
                         RAVELOG_DEBUG("Jnt %d: Retrieved stored torque limit of %f\n",ind,_doftorquelimits[ind]);
                         //KLUDGE: too lazy to look up how to neatly do dynamic allocation here
