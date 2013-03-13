@@ -22,7 +22,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set(PLUGIN_LINK_FLAGS "")
 endif()
 
-include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}../include")
+include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 
 link_directories(${OpenRAVE_LINK_DIRS})
 link_directories(${Boost_LIBRARY_DIRS}) 
