@@ -3,15 +3,29 @@ project (openmr)
 
 option(BUILD_ACHCONTROLLER "Build achcontroller (requires ach libraries)" ON)
 option(USE_CUSTOM_ODERAVE "Use Rob's custom ODE plugin (only if you know what you're doing!)" OFF)
+
 find_package(OpenRAVE REQUIRED)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall -std=gnu++0x")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-include_directories( ${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+if( NOT OpenRAVE_FOUND )
+  message(FATAL_ERROR "could not find openrave, check for openrave-config in path")
+endif( NOT OpenRAVE_FOUND )
 
-link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS}) 
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  add_definitions("-fno-strict-aliasing -Wall")
+endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  set(PLUGIN_LINK_FLAGS "")
+endif()
+
+include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}../include")
+
+link_directories(${OpenRAVE_LINK_DIRS})
+link_directories(${Boost_LIBRARY_DIRS}) 
 
 add_library(openmr SHARED openmrmain.cpp)
 set_target_properties(openmr PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}")
