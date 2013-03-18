@@ -22,6 +22,7 @@
 
 set(_OpenRAVE_PATHS)
 if(NOT OpenRAVE_DIR)
+    message(STATUS "Openravedir var not set")
   if( WIN32 )
     # search in the registry
     set(_OpenRAVE_CONFIG_NAME "openrave-config.exe")
