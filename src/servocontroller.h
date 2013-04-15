@@ -51,6 +51,7 @@ class ServoController : public ControllerBase
                 "Format: getpos servo. Returns the current servo position (in degrees). The argument servo is the servo number, starting from 0");
         RegisterCommand("record_on",boost::bind(&ServoController::RecordOn,this,_1,_2),
                 "Format: record_on . Start recording the servo positions and references to memory");
+        //TODO: add better record syntax?
         RegisterCommand("record_off",boost::bind(&ServoController::RecordOff,this,_1,_2),
                 "Format: record_off filename [startDOF stopDOF]. Stop recording and generate octave/matlab file of specified results. Can be run multiple times to export different servos. ");
         RegisterCommand("print",boost::bind(&ServoController::GetAllProperties,this,_1,_2),
@@ -89,6 +90,7 @@ class ServoController : public ControllerBase
 
             // Initialize the Recording mode
             _recording=false;
+            _filename="servodata.log";
 
             // Initialize the vector for the recording mode
             _phi_tvec.resize(_dofindices.size());
@@ -598,9 +600,8 @@ class ServoController : public ControllerBase
             }
             //Remove file definition here
 
-            string file;
-            if (is >> file){
-                outFile.open(file.c_str());
+            if (is >> _filename){
+                _outFile.open(_filename.c_str());
             }
 
             _recording=true;
@@ -618,13 +619,12 @@ class ServoController : public ControllerBase
         {
             _recording=false;
             //Potential interference here, since recording could still be occuring.
-            string file;
             size_t startDOF = 0;
             size_t stopDOF = _phi_tvec.size()-1;
 
-            if ( !(is >> file) ) {
+            if ( !(is >> _filename) ) {
                 //No file provided
-                if (!outFile.is_open()){
+                if (!_outFile.is_open()){
                     RAVELOG_ERROR("No destination provided!\n");
                     os << 0;
                     return false;
@@ -634,27 +634,27 @@ class ServoController : public ControllerBase
             // If only 1 parameter is passed in, make both start and stop equal
             is >> startDOF >> stopDOF;
 
-            RAVELOG_VERBOSE("Send data to %s\n",file.c_str());
+            RAVELOG_VERBOSE("Send data to %s\n",_filename.c_str());
             RAVELOG_VERBOSE("stopDOF: %d\n",stopDOF);
             RAVELOG_VERBOSE("startDOF: %d\n",startDOF);
 
-            if (file == "string"){
+            if (_filename == "string"){
                 //Send data directly to output string
                 _SerializeRecordedData(os,startDOF,stopDOF);
             }
             else  {
                 //TODO: verify that outfile can be opened
-                if (!outFile.is_open()) outFile.open(file.c_str());
+                if (!_outFile.is_open()) _outFile.open(_filename.c_str());
 
-                if (outFile.fail()) {
-                    RAVELOG_ERROR("Invalid data file %s\n",file.c_str());
+                if (_outFile.fail()) {
+                    RAVELOG_ERROR("Invalid data file %s\n",_filename.c_str());
                     return false;
                 }
 
-                RAVELOG_INFO("Writing servo data %d to %d in data file: %s \n",startDOF,stopDOF,file.c_str());
+                RAVELOG_INFO("Writing servo data %d to %d in data file: %s \n",startDOF,stopDOF,_filename.c_str());
                 _WriteDataFile(startDOF,stopDOF);
 
-                outFile.close();
+                _outFile.close();
             }
 
             RAVELOG_INFO("RECORD off\n");
@@ -752,9 +752,9 @@ class ServoController : public ControllerBase
         {
             FOREACH(it,_dofindices)
             {
-                outFile << "Joint " << *it <<": " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << " ";
+                _outFile << "Joint " << *it <<": " << _KP[*it] << " " << _KI[*it] << " " << _KD[*it] << " ";
             }
-            outFile << " Filter Gains: "  << _Kf << " " << _Ka << "\n";
+            _outFile << " Filter Gains: "  << _Kf << " " << _Ka << "\n";
         }
 
         /**
@@ -801,20 +801,20 @@ class ServoController : public ControllerBase
 
             // Servos angle
             for (size_t s=startDOF; s<stopDOF; s++) {
-                outFile << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
+                _outFile << _probot->GetJointFromDOFIndex(s)->GetName() << " " ;
                 for (size_t t=0; t<size; t++) {
-                    outFile << _phi_tvec[s][t]*180/PI << " ";
+                    _outFile << _phi_tvec[s][t]*180/PI << " ";
                 }
-                outFile << endl;
+                _outFile << endl;
             }
 
             // Reference positions
             for (size_t s=startDOF; s<stopDOF; s++) {
-                outFile << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
+                _outFile << _probot->GetJointFromDOFIndex(s)->GetName() << "_REF " ;
                 for (size_t t=0; t<size; t++) {
-                    outFile << _ref_tvec[s][t]*180/PI << " ";
+                    _outFile << _ref_tvec[s][t]*180/PI << " ";
                 }
-                outFile << endl;
+                _outFile << endl;
             }
         }
 
@@ -881,7 +881,8 @@ class ServoController : public ControllerBase
         dReal _tol;
 
         // For recording....
-        ofstream outFile;                 // Stream file for storing the servo positions
+        ofstream _outFile;                 // Stream file for storing the servo positions
+        string _filename;
         bool _recording;                  // Recording mode
         std::vector<tvector> _phi_tvec;     // Servo's angles in time
         std::vector<tvector> _ref_tvec;     // Servo's reference positions in time

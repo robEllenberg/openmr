@@ -38,6 +38,14 @@ class TrajectoryController : public ControllerBase
         RegisterCommand("closedloop",boost::bind(&TrajectoryController::SetControlParam,this,_1,_2,CLOSED_LOOP),
                 "Set the given joints to PID control with ODE velocity motors");
 
+        //Bulk pass commands to servo
+        vector<string> passed = {"record_on","record_off","setpos","getpos"};
+        FOREACH(it,passed){
+
+            RegisterCommand(*it,boost::bind(&TrajectoryController::PassCommand,this,_1,_2,*it),
+                    "Command Passed to ServoController");
+        }
+
     }
         virtual ~TrajectoryController() {}
 
